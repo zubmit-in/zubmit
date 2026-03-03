@@ -1,0 +1,648 @@
+// Auto-generated types for Supabase database
+// To regenerate: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          full_name: string;
+          email: string;
+          phone: string | null;
+          college_name: string;
+          degree: string;
+          specialization: string | null;
+          semester: number;
+          roll_no: string | null;
+          role: "student" | "worker" | "admin";
+          worker_agreed: boolean;
+          worker_agreed_at: string | null;
+          worker_banned: boolean;
+          worker_ban_reason: string | null;
+          total_orders: number;
+          total_spent: number;
+          worker_full_name: string | null;
+          worker_contact: string | null;
+          worker_university: string | null;
+          worker_roll_no: string | null;
+          worker_degree: string | null;
+          worker_specialization: string | null;
+          accommodation_type: string | null;
+          tower_no: number | null;
+          tower_room_no: string | null;
+          block_no: string | null;
+          block_room_no: string | null;
+          upi_qr_url: string | null;
+          worker_profile_complete: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          full_name: string;
+          email: string;
+          phone?: string | null;
+          college_name: string;
+          degree: string;
+          specialization?: string | null;
+          semester: number;
+          roll_no?: string | null;
+          role?: "student" | "worker" | "admin";
+          worker_agreed?: boolean;
+          worker_agreed_at?: string | null;
+          worker_banned?: boolean;
+          worker_ban_reason?: string | null;
+          total_orders?: number;
+          total_spent?: number;
+          worker_full_name?: string | null;
+          worker_contact?: string | null;
+          worker_university?: string | null;
+          worker_roll_no?: string | null;
+          worker_degree?: string | null;
+          worker_specialization?: string | null;
+          accommodation_type?: string | null;
+          tower_no?: number | null;
+          tower_room_no?: string | null;
+          block_no?: string | null;
+          block_room_no?: string | null;
+          upi_qr_url?: string | null;
+          worker_profile_complete?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          email?: string;
+          phone?: string | null;
+          college_name?: string;
+          degree?: string;
+          specialization?: string | null;
+          semester?: number;
+          roll_no?: string | null;
+          role?: "student" | "worker" | "admin";
+          worker_agreed?: boolean;
+          worker_agreed_at?: string | null;
+          worker_banned?: boolean;
+          worker_ban_reason?: string | null;
+          total_orders?: number;
+          total_spent?: number;
+          worker_full_name?: string | null;
+          worker_contact?: string | null;
+          worker_university?: string | null;
+          worker_roll_no?: string | null;
+          worker_degree?: string | null;
+          worker_specialization?: string | null;
+          accommodation_type?: string | null;
+          tower_no?: number | null;
+          tower_room_no?: string | null;
+          block_no?: string | null;
+          block_room_no?: string | null;
+          upi_qr_url?: string | null;
+          worker_profile_complete?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          degree: string;
+          specialization: string | null;
+          semester: number;
+          subject: string;
+          service_type: string;
+          delivery_type: string;
+          title: string;
+          roll_no: string;
+          description: string;
+          front_page_info: string | null;
+          material_note: string | null;
+          pickup_address: string | null;
+          reference_file_url: string | null;
+          deadline: string;
+          hours_until_deadline: number | null;
+          base_price: number;
+          urgency_multiplier: number;
+          total_price: number;
+          advance_amount: number;
+          final_amount: number;
+          advance_paid: boolean;
+          advance_paid_at: string | null;
+          final_paid: boolean;
+          final_paid_at: string | null;
+          watermark_file_url: string | null;
+          watermark_uploaded_at: string | null;
+          final_file_url: string | null;
+          final_uploaded_at: string | null;
+          status: string;
+          revision_count: number;
+          revision_note: string | null;
+          worker_id: string | null;
+          assigned_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          degree: string;
+          specialization?: string | null;
+          semester: number;
+          subject: string;
+          service_type: string;
+          delivery_type?: string;
+          title: string;
+          roll_no: string;
+          description: string;
+          front_page_info?: string | null;
+          material_note?: string | null;
+          pickup_address?: string | null;
+          reference_file_url?: string | null;
+          deadline: string;
+          base_price: number;
+          urgency_multiplier?: number;
+          total_price: number;
+          advance_amount: number;
+          final_amount: number;
+          advance_paid?: boolean;
+          advance_paid_at?: string | null;
+          final_paid?: boolean;
+          final_paid_at?: string | null;
+          watermark_file_url?: string | null;
+          watermark_uploaded_at?: string | null;
+          final_file_url?: string | null;
+          final_uploaded_at?: string | null;
+          status?: string;
+          revision_count?: number;
+          revision_note?: string | null;
+          worker_id?: string | null;
+          assigned_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          degree?: string;
+          specialization?: string | null;
+          semester?: number;
+          subject?: string;
+          service_type?: string;
+          delivery_type?: string;
+          title?: string;
+          roll_no?: string;
+          description?: string;
+          front_page_info?: string | null;
+          material_note?: string | null;
+          pickup_address?: string | null;
+          reference_file_url?: string | null;
+          deadline?: string;
+          base_price?: number;
+          urgency_multiplier?: number;
+          total_price?: number;
+          advance_amount?: number;
+          final_amount?: number;
+          advance_paid?: boolean;
+          advance_paid_at?: string | null;
+          final_paid?: boolean;
+          final_paid_at?: string | null;
+          watermark_file_url?: string | null;
+          watermark_uploaded_at?: string | null;
+          final_file_url?: string | null;
+          final_uploaded_at?: string | null;
+          status?: string;
+          revision_count?: number;
+          revision_note?: string | null;
+          worker_id?: string | null;
+          assigned_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      payments: {
+        Row: {
+          id: string;
+          order_id: string;
+          user_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id: string | null;
+          razorpay_signature: string | null;
+          amount: number;
+          amount_paise: number;
+          currency: string;
+          payment_type: "advance" | "final";
+          payment_method: string | null;
+          status: "created" | "captured" | "failed" | "refunded";
+          failure_reason: string | null;
+          created_at: string;
+          captured_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          user_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id?: string | null;
+          razorpay_signature?: string | null;
+          amount: number;
+          amount_paise: number;
+          currency?: string;
+          payment_type: "advance" | "final";
+          payment_method?: string | null;
+          status?: "created" | "captured" | "failed" | "refunded";
+          failure_reason?: string | null;
+          created_at?: string;
+          captured_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          user_id?: string;
+          razorpay_order_id?: string;
+          razorpay_payment_id?: string | null;
+          razorpay_signature?: string | null;
+          amount?: number;
+          amount_paise?: number;
+          currency?: string;
+          payment_type?: "advance" | "final";
+          payment_method?: string | null;
+          status?: "created" | "captured" | "failed" | "refunded";
+          failure_reason?: string | null;
+          created_at?: string;
+          captured_at?: string | null;
+        };
+        Relationships: [];
+      };
+      worker_tasks: {
+        Row: {
+          id: string;
+          order_id: string;
+          worker_id: string;
+          assigned_by: string | null;
+          worker_pay: number;
+          instructions: string | null;
+          status: string;
+          rejection_note: string | null;
+          submitted_file_url: string | null;
+          submitted_at: string | null;
+          approved_at: string | null;
+          worker_paid: boolean;
+          worker_paid_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          worker_id: string;
+          assigned_by?: string | null;
+          worker_pay: number;
+          instructions?: string | null;
+          status?: string;
+          rejection_note?: string | null;
+          submitted_file_url?: string | null;
+          submitted_at?: string | null;
+          approved_at?: string | null;
+          worker_paid?: boolean;
+          worker_paid_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          worker_id?: string;
+          assigned_by?: string | null;
+          worker_pay?: number;
+          instructions?: string | null;
+          status?: string;
+          rejection_note?: string | null;
+          submitted_file_url?: string | null;
+          submitted_at?: string | null;
+          approved_at?: string | null;
+          worker_paid?: boolean;
+          worker_paid_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      worker_earnings: {
+        Row: {
+          id: string;
+          worker_id: string;
+          task_id: string;
+          amount: number;
+          status: "pending" | "processing" | "paid" | "withheld";
+          upi_transaction_id: string | null;
+          paid_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          worker_id: string;
+          task_id: string;
+          amount: number;
+          status?: "pending" | "processing" | "paid" | "withheld";
+          upi_transaction_id?: string | null;
+          paid_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          worker_id?: string;
+          task_id?: string;
+          amount?: number;
+          status?: "pending" | "processing" | "paid" | "withheld";
+          upi_transaction_id?: string | null;
+          paid_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string;
+          type: string;
+          order_id: string | null;
+          read: boolean;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message: string;
+          type: string;
+          order_id?: string | null;
+          read?: boolean;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          message?: string;
+          type?: string;
+          order_id?: string | null;
+          read?: boolean;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      order_status_history: {
+        Row: {
+          id: string;
+          order_id: string;
+          old_status: string | null;
+          new_status: string;
+          changed_by: string | null;
+          changed_by_role: string | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          old_status?: string | null;
+          new_status: string;
+          changed_by?: string | null;
+          changed_by_role?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          old_status?: string | null;
+          new_status?: string;
+          changed_by?: string | null;
+          changed_by_role?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      revision_requests: {
+        Row: {
+          id: string;
+          order_id: string;
+          user_id: string;
+          description: string;
+          status: string;
+          resolved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          user_id: string;
+          description: string;
+          status?: string;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          user_id?: string;
+          description?: string;
+          status?: string;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      available_tasks: {
+        Row: {
+          id: string;
+          title: string;
+          subject: string;
+          degree: string;
+          specialization: string;
+          semester: string;
+          service_type: string;
+          delivery_type: string;
+          description: string | null;
+          page_count: number | null;
+          real_deadline: string;
+          worker_pay: number;
+          status: string;
+          assigned_worker_id: string | null;
+          assigned_at: string | null;
+          order_id: string | null;
+          admin_notes: string | null;
+          revision_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          subject: string;
+          degree: string;
+          specialization: string;
+          semester: string;
+          service_type: string;
+          delivery_type: string;
+          description?: string | null;
+          page_count?: number | null;
+          real_deadline: string;
+          worker_pay?: number;
+          status?: string;
+          assigned_worker_id?: string | null;
+          assigned_at?: string | null;
+          order_id?: string | null;
+          admin_notes?: string | null;
+          revision_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          subject?: string;
+          degree?: string;
+          specialization?: string;
+          semester?: string;
+          service_type?: string;
+          delivery_type?: string;
+          description?: string | null;
+          page_count?: number | null;
+          real_deadline?: string;
+          worker_pay?: number;
+          status?: string;
+          assigned_worker_id?: string | null;
+          assigned_at?: string | null;
+          order_id?: string | null;
+          admin_notes?: string | null;
+          revision_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      task_submissions: {
+        Row: {
+          id: string;
+          task_id: string;
+          worker_id: string;
+          file_url: string | null;
+          file_name: string | null;
+          file_size: number | null;
+          is_physical_complete: boolean;
+          physical_completed_at: string | null;
+          review_status: string;
+          revision_count: number;
+          reviewer_notes: string | null;
+          reviewed_at: string | null;
+          submitted_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          worker_id: string;
+          file_url?: string | null;
+          file_name?: string | null;
+          file_size?: number | null;
+          is_physical_complete?: boolean;
+          physical_completed_at?: string | null;
+          review_status?: string;
+          revision_count?: number;
+          reviewer_notes?: string | null;
+          reviewed_at?: string | null;
+          submitted_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          worker_id?: string;
+          file_url?: string | null;
+          file_name?: string | null;
+          file_size?: number | null;
+          is_physical_complete?: boolean;
+          physical_completed_at?: string | null;
+          review_status?: string;
+          revision_count?: number;
+          reviewer_notes?: string | null;
+          reviewed_at?: string | null;
+          submitted_at?: string;
+        };
+        Relationships: [];
+      };
+      task_review_stages: {
+        Row: {
+          id: string;
+          task_id: string;
+          worker_id: string;
+          stage: string;
+          message: string;
+          admin_note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          worker_id: string;
+          stage: string;
+          message: string;
+          admin_note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          worker_id?: string;
+          stage?: string;
+          message?: string;
+          admin_note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      get_order_with_details: {
+        Args: { order_uuid: string };
+        Returns: Json;
+      };
+      get_worker_earnings_summary: {
+        Args: { worker_user_id: string };
+        Returns: Json;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+}
+
+// Convenience type aliases
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Order = Database["public"]["Tables"]["orders"]["Row"];
+export type Payment = Database["public"]["Tables"]["payments"]["Row"];
+export type WorkerTask = Database["public"]["Tables"]["worker_tasks"]["Row"];
+export type WorkerEarning = Database["public"]["Tables"]["worker_earnings"]["Row"];
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+export type AvailableTask = Database["public"]["Tables"]["available_tasks"]["Row"];
+export type TaskSubmission = Database["public"]["Tables"]["task_submissions"]["Row"];
+export type TaskReviewStage = Database["public"]["Tables"]["task_review_stages"]["Row"];
