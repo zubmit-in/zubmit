@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       deliveryType,
       pickupAddress,
       materialNote,
+      referenceFileUrl,
       pages,
       slides,
     } = body;
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
         front_page_info: frontPageInfo || null,
         pickup_address: pickupAddress || null,
         material_note: materialNote || null,
+        reference_file_url: referenceFileUrl || null,
         deadline: new Date(deadline).toISOString(),
         hours_until_deadline: Math.round(hoursUntilDeadline),
         base_price: totalPrice,

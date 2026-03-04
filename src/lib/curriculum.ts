@@ -1008,7 +1008,6 @@ export const curriculum: Record<string, Record<string, Record<number, string[]>>
         "Applied Physics",
         "Engineering Concepts in IoT",
         "Environmental Science",
-        "Experiential Learning Project",
       ],
       2: [
         "Engineering Chemistry",
@@ -1016,7 +1015,7 @@ export const curriculum: Record<string, Record<string, Record<number, string[]>>
         "Probability & Statistics",
         "Indian Knowledge Systems",
         "Foundations of Identity & Communication",
-        "Experiential Learning Project II",
+        "Societal Internship Project",
       ],
       3: [
         "Database Management Systems",

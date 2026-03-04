@@ -71,21 +71,7 @@ export function SubjectSelector({
         </Select>
       </div>
 
-      {specializations.length > 0 && (
-        <div>
-          <Label>Specialization</Label>
-          <Select value={specialization} onValueChange={(v) => { setSpecialization(v); setSubject(""); }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select specialization" />
-            </SelectTrigger>
-            <SelectContent>
-              {specializations.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {/* Specialization auto-set to first available */}
 
       {maxSemester > 0 && (
         <div>

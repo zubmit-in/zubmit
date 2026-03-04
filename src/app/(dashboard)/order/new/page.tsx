@@ -146,6 +146,8 @@ export default function NewOrderPage() {
     title: "", rollNo: "", description: "", frontPageInfo: "",
     deadline: "", pages: "", slides: "",
   });
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [uploadingRef, setUploadingRef] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -242,6 +244,23 @@ export default function NewOrderPage() {
     if (!user) return;
     setLoading(true);
     try {
+      // Upload reference file if selected
+      let referenceFileUrl: string | null = null;
+      if (referenceFile) {
+        setUploadingRef(true);
+        const fileForm = new FormData();
+        fileForm.append("file", referenceFile);
+        const uploadRes = await fetch("/api/orders/upload-reference", {
+          method: "POST",
+          body: fileForm,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          referenceFileUrl = uploadData.url;
+        }
+        setUploadingRef(false);
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -252,6 +271,7 @@ export default function NewOrderPage() {
           specialization: formData.specialization,
           semester: Number(formData.semester),
           frontPageInfo: formData.frontPageInfo || null,
+          referenceFileUrl,
           deadline: new Date(formData.deadline).toISOString(),
           pages: formData.pages ? Number(formData.pages) : null,
           slides: formData.slides ? Number(formData.slides) : null,
@@ -294,7 +314,7 @@ export default function NewOrderPage() {
       toast({ title: "Error", description: message, variant: "destructive" });
       setLoading(false);
     }
-  }, [user, formData, finalSubject, totalPrice, advance, loadRazorpay, toast, router]);
+  }, [user, formData, finalSubject, totalPrice, advance, loadRazorpay, toast, router, referenceFile]);
 
   const whatsappMessage = useMemo(() => {
     return `Hi! I'd like to place a *${formData.serviceType ? serviceLabels[formData.serviceType as ServiceType] : ""}* order.\n\n*Details:*\n- Subject: ${finalSubject}\n- Degree: ${formData.degree}\n- Semester: ${formData.semester}\n- Roll No: ${formData.rollNo || profile?.roll_no || "N/A"}\n- Name: ${user?.fullName || "N/A"}\n- Email: ${user?.emailAddresses[0]?.emailAddress || "N/A"}\n\nPlease guide me on the next steps.`;
@@ -405,19 +425,18 @@ export default function NewOrderPage() {
           {/* STEP 1 */}
           {currentStep === 1 && (
             <div className="card" style={{ padding: '40px' }}>
-              <div className="flex items-center gap-3.5 mb-1">
+              <div className="flex items-center gap-3.5 mb-4">
                 <div className="flex items-center justify-center" style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--p-dim)', border: '1px solid var(--p-border)' }}>
                   <BookMarked className="h-[22px] w-[22px]" style={{ color: 'var(--p-bright)' }} />
                 </div>
                 <div>
                   <h3 className="font-outfit font-bold text-xl" style={{ color: 'var(--t1)' }}>Select Your Subject</h3>
-                  <p className="font-outfit text-sm" style={{ color: 'var(--t2)' }}>Choose your degree, specialization, semester, and subject</p>
+                  <p className="font-outfit text-sm" style={{ color: 'var(--t2)' }}>Choose your degree, semester, and subject</p>
                 </div>
               </div>
               <div className="gradient-sep my-6" />
               <div className="space-y-5">
                 <div><Label className="field-label">Degree Program</Label><Select value={formData.degree} onValueChange={(val) => updateField("degree", val)}><SelectTrigger><SelectValue placeholder="Select your degree" /></SelectTrigger><SelectContent>{degreeList.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}</SelectContent></Select></div>
-                {specializations.length > 0 && (<div><Label className="field-label">Specialization</Label><Select value={formData.specialization} onValueChange={(val) => updateField("specialization", val)}><SelectTrigger><SelectValue placeholder="Select specialization" /></SelectTrigger><SelectContent>{specializations.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select></div>)}
                 {maxSemester > 0 && (<div><Label className="field-label">Semester</Label><Select value={formData.semester} onValueChange={(val) => updateField("semester", val)}><SelectTrigger><SelectValue placeholder="Select semester" /></SelectTrigger><SelectContent>{Array.from({ length: maxSemester }, (_, i) => (<SelectItem key={i + 1} value={String(i + 1)}>Semester {i + 1}</SelectItem>))}</SelectContent></Select></div>)}
                 {subjects.length > 0 && !formData.cantFindSubject && (<div><Label className="field-label">Subject</Label><Select value={formData.subject} onValueChange={(val) => updateField("subject", val)}><SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger><SelectContent>{subjects.map((sub) => (<SelectItem key={sub} value={sub}>{sub}</SelectItem>))}</SelectContent></Select></div>)}
                 <div className="flex items-center gap-3 pt-1"><Checkbox id="cantFind" checked={formData.cantFindSubject} onCheckedChange={(checked) => { updateField("cantFindSubject", checked === true); if (checked) updateField("subject", ""); else updateField("customSubject", ""); }} /><Label htmlFor="cantFind" className="text-sm cursor-pointer" style={{ color: 'var(--t3)' }}>Can&apos;t find your subject? Enter it manually</Label></div>
@@ -432,7 +451,7 @@ export default function NewOrderPage() {
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="card" style={{ padding: '40px' }}>
-                <div className="flex items-center gap-3.5 mb-1">
+                <div className="flex items-center gap-3.5 mb-4">
                   <div className="flex items-center justify-center" style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--p-dim)', border: '1px solid var(--p-border)' }}>
                     <FileText className="h-[22px] w-[22px]" style={{ color: 'var(--p-bright)' }} />
                   </div>
@@ -467,7 +486,7 @@ export default function NewOrderPage() {
                         <h3 className="font-outfit font-bold text-sm mb-1" style={{ color: 'var(--t1)' }}>{serviceLabels[svc]}</h3>
                         <p className="font-outfit text-xs mb-3 line-clamp-2" style={{ color: 'var(--t3)' }}>{serviceDescriptions[svc]}</p>
                         <p className="mono text-xs" style={{ color: 'var(--p-bright)' }}>From {startPrice}</p>
-                        {isSelected && (<div className="absolute top-3 left-3"><CheckCircle2 className="h-5 w-5" style={{ color: 'var(--p-bright)' }} /></div>)}
+                        {isSelected && (<div className="absolute -top-2 -right-2 flex items-center justify-center" style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--p)', boxShadow: '0 2px 8px var(--p-glow)' }}><CheckCircle2 className="h-4 w-4" style={{ color: 'white' }} /></div>)}
                       </button>
                     );
                   })}
@@ -510,7 +529,7 @@ export default function NewOrderPage() {
           {currentStep === 3 && (
             <div className="space-y-6">
               <div className="card" style={{ padding: '40px' }}>
-                <div className="flex items-center gap-3.5 mb-1">
+                <div className="flex items-center gap-3.5 mb-4">
                   <div className="flex items-center justify-center" style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--p-dim)', border: '1px solid var(--p-border)' }}>
                     <FileEdit className="h-[22px] w-[22px]" style={{ color: 'var(--p-bright)' }} />
                   </div>
@@ -525,9 +544,51 @@ export default function NewOrderPage() {
                   <div><Label className="field-label">Roll Number *</Label><Input placeholder="e.g. 22BCS10045" value={formData.rollNo} onChange={(e) => updateField("rollNo", e.target.value)} /></div>
                   <div><Label className="field-label">Professor Instructions / Description</Label><Textarea placeholder="Any specific instructions, topics to cover, formatting requirements..." value={formData.description} onChange={(e) => updateField("description", e.target.value)} className="min-h-[120px]" /></div>
                   <div><Label className="field-label">Front Page Information</Label><Input placeholder="Professor name, subject code, academic year, etc." value={formData.frontPageInfo} onChange={(e) => updateField("frontPageInfo", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>This will appear on the cover page</p></div>
-                  <div style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '12px', padding: '16px' }} className="flex items-start gap-3">
-                    <Upload className="h-5 w-5 shrink-0 mt-0.5" style={{ color: 'var(--p-bright)' }} />
-                    <div><p className="font-outfit font-semibold text-sm" style={{ color: 'var(--t1)' }}>Reference Files</p><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t2)' }}>Need to upload reference files? Share them via WhatsApp after placing your order.</p></div>
+                  <div style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '12px', padding: '16px' }}>
+                    <div className="flex items-start gap-3 mb-3">
+                      <Upload className="h-5 w-5 shrink-0 mt-0.5" style={{ color: 'var(--p-bright)' }} />
+                      <div>
+                        <p className="font-outfit font-semibold text-sm" style={{ color: 'var(--t1)' }}>Reference Files</p>
+                        <p className="font-outfit text-xs mt-1" style={{ color: 'var(--t2)' }}>Upload any reference material, notes, or guidelines (optional)</p>
+                      </div>
+                    </div>
+                    <label
+                      className="flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
+                      style={{
+                        padding: '12px 16px', borderRadius: '10px',
+                        border: referenceFile ? '1px solid var(--g-border)' : '1px dashed var(--b2)',
+                        background: referenceFile ? 'var(--g-dim)' : 'var(--hover-bg)',
+                      }}
+                    >
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip,.rar"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setReferenceFile(file);
+                        }}
+                      />
+                      {referenceFile ? (
+                        <span className="font-outfit text-sm font-medium" style={{ color: 'var(--g)' }}>
+                          {referenceFile.name} ({(referenceFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                      ) : (
+                        <span className="font-outfit text-sm" style={{ color: 'var(--t3)' }}>
+                          Click to choose a file
+                        </span>
+                      )}
+                    </label>
+                    {referenceFile && (
+                      <button
+                        type="button"
+                        className="font-outfit text-xs mt-2"
+                        style={{ color: 'var(--r)' }}
+                        onClick={() => setReferenceFile(null)}
+                      >
+                        Remove file
+                      </button>
+                    )}
                   </div>
                   {formData.serviceType === "PPT" && (<div><Label className="field-label">Number of Slides</Label><Input type="number" min={1} placeholder="e.g. 15" value={formData.slides} onChange={(e) => updateField("slides", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>Base price covers up to 10 slides</p></div>)}
                   {formData.serviceType !== "PPT" && formData.serviceType !== "PROTOTYPE_FULL_STACK_WEBSITE" && (<div><Label className="field-label">Number of Pages (optional)</Label><Input type="number" min={1} placeholder="e.g. 10" value={formData.pages} onChange={(e) => updateField("pages", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>Base price covers up to 5 pages</p></div>)}
@@ -596,7 +657,7 @@ export default function NewOrderPage() {
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="card" style={{ padding: '40px' }}>
-                <div className="flex items-center gap-3.5 mb-1">
+                <div className="flex items-center gap-3.5 mb-4">
                   <div className="flex items-center justify-center" style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--p-dim)', border: '1px solid var(--p-border)' }}>
                     <CheckCircle2 className="h-[22px] w-[22px]" style={{ color: 'var(--p-bright)' }} />
                   </div>
@@ -648,7 +709,7 @@ export default function NewOrderPage() {
 
               <div className="space-y-3">
                 <button className="btn btn-p w-full justify-center" style={{ padding: '16px' }} onClick={handlePayment} disabled={loading}>
-                  {loading ? (<><Loader2 className="h-5 w-5 animate-spin" />Processing...</>) : (<>Pay {formatPrice(advance)} Advance Now <ArrowRight className="h-5 w-5" /></>)}
+                  {loading ? (<><Loader2 className="h-5 w-5 animate-spin" />{uploadingRef ? "Uploading files..." : "Processing..."}</>) : (<>Pay {formatPrice(advance)} Advance Now <ArrowRight className="h-5 w-5" /></>)}
                 </button>
                 <a href={getWhatsAppLink(WHATSAPP_NUMBER, `Hi, I need help with my order for "${finalSubject}".`)} target="_blank" rel="noopener noreferrer" className="block">
                   <button className="btn btn-ghost w-full justify-center" style={{ fontSize: '13px' }}><MessageCircle className="h-4 w-4" />Need help? Chat with us on WhatsApp</button>
