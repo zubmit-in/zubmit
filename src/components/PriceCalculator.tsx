@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   calculatePrice,
+  calculateOrderSurcharge,
   getAdvanceAmount,
   getFinalAmount,
   getUrgencyLabel,
@@ -33,7 +34,10 @@ export function PriceCalculator({
     const hours = getHoursUntilDeadline(deadline);
     if (hours <= 0) return null;
 
-    const total = calculatePrice(serviceType, hours, pages, slides);
+    const base = calculatePrice(serviceType);
+    const svcPages = serviceType === "PPT" ? (slides || 0) : (pages || 0);
+    const surcharge = calculateOrderSurcharge([svcPages], hours);
+    const total = base + surcharge;
     const advance = getAdvanceAmount(total);
     const final_ = getFinalAmount(total);
     const urgency = getUrgencyLabel(hours);

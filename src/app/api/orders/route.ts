@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { calculatePrice, getAdvanceAmount } from "@/lib/pricing";
+import { calculatePrice, calculateOrderSurcharge, getAdvanceAmount } from "@/lib/pricing";
 import { getHoursUntilDeadline } from "@/lib/utils";
 import { razorpay } from "@/lib/razorpay";
 import type { ServiceType } from "@/lib/pricing";
@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
       semester,
       subject,
       serviceType,
+      serviceTypes,
+      serviceDetails,
       title,
       rollNo,
       description,
@@ -33,18 +35,29 @@ export async function POST(req: NextRequest) {
       slides,
     } = body;
 
-    if (!degree || !semester || !subject || !serviceType || !title || !rollNo || !description || !deadline) {
+    // Support both single serviceType (backward compat) and array serviceTypes
+    const resolvedServiceTypes: string[] = serviceTypes && Array.isArray(serviceTypes) && serviceTypes.length > 0
+      ? serviceTypes
+      : serviceType ? [serviceType] : [];
+    const primaryServiceType = resolvedServiceTypes[0];
+
+    if (!degree || !semester || !subject || resolvedServiceTypes.length === 0 || !title || !rollNo || !deadline) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Calculate price server-side
+    // Calculate price server-side: base prices + order-level surcharge
     const hoursUntilDeadline = getHoursUntilDeadline(deadline);
-    const totalPrice = calculatePrice(
-      serviceType as ServiceType,
-      hoursUntilDeadline,
-      pages ? parseInt(pages.toString()) : undefined,
-      slides ? parseInt(slides.toString()) : undefined
-    );
+    const baseTotal = resolvedServiceTypes.reduce((sum, svc) => {
+      return sum + calculatePrice(svc as ServiceType);
+    }, 0);
+    // Per-service page counts (slides count as pages for PPT)
+    const servicePageCounts = resolvedServiceTypes.map((svc) => {
+      const detail = serviceDetails?.[svc];
+      if (svc === "PPT") return detail?.slides ? parseInt(detail.slides.toString()) : (slides ? parseInt(slides.toString()) : 0);
+      return detail?.pages ? parseInt(detail.pages.toString()) : (pages ? parseInt(pages.toString()) : 0);
+    });
+    const surcharge = calculateOrderSurcharge(servicePageCounts, hoursUntilDeadline);
+    const totalPrice = baseTotal + surcharge;
     const advanceAmount = getAdvanceAmount(totalPrice);
     const finalAmount = totalPrice - advanceAmount;
 
@@ -57,7 +70,8 @@ export async function POST(req: NextRequest) {
         specialization: specialization || null,
         semester: parseInt(semester.toString()),
         subject,
-        service_type: serviceType,
+        service_type: primaryServiceType,
+        service_types: resolvedServiceTypes,
         delivery_type: deliveryType || "DIGITAL",
         title,
         roll_no: rollNo,

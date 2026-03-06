@@ -9,6 +9,7 @@ export default function SignupPage() {
   return (
     <div className="flex items-center justify-center">
       <SignUp
+        fallbackRedirectUrl="/onboarding"
         appearance={{
           elements: {
             rootBox: "w-full max-w-md",

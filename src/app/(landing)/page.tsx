@@ -16,6 +16,17 @@ import {
   ArrowRight,
   MessageCircle,
   FileEdit,
+  Briefcase,
+  ClipboardList,
+  Building2,
+  Ruler,
+  Compass,
+  Palette,
+  ShieldCheck,
+  Monitor,
+  Lamp,
+  Layers,
+  Pipette,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -36,19 +47,34 @@ const serviceIcons: Record<string, React.ReactNode> = {
   CASE_STUDY: <FileText className="h-5 w-5" />,
   REPORT: <FileEdit className="h-5 w-5" />,
   PPT: <Presentation className="h-5 w-5" />,
-  LAB_MANUAL: <BookMarked className="h-5 w-5" />,
+  LAB_RECORDS: <BookMarked className="h-5 w-5" />,
   HANDWRITTEN_ASSIGNMENT: <PenTool className="h-5 w-5" />,
   NOTES: <StickyNote className="h-5 w-5" />,
   PROTOTYPE_FULL_STACK_WEBSITE: <Globe className="h-5 w-5" />,
+  INTERNSHIP_RESUME: <Briefcase className="h-5 w-5" />,
+  SURVEY_REPORTS: <ClipboardList className="h-5 w-5" />,
+  ARCHITECTURAL_VISUALIZATION: <Building2 className="h-5 w-5" />,
+  ARCHITECTURAL_DRAFTING: <Ruler className="h-5 w-5" />,
+  ARCHITECTURAL_DESIGN_DEVELOPMENT: <Compass className="h-5 w-5" />,
+  INTERIOR_DESIGN_PORTFOLIO: <Palette className="h-5 w-5" />,
+  BUILDING_CODES_REGULATIONS: <ShieldCheck className="h-5 w-5" />,
+  INTERIOR_DESIGN_SOFTWARE_VISUALIZATION: <Monitor className="h-5 w-5" />,
+  INTERIOR_STYLING_DECORATION: <Lamp className="h-5 w-5" />,
+  MATERIALS_FINISHES_PROJECTS: <Layers className="h-5 w-5" />,
+  COLOR_THEORY_APPLICATION: <Pipette className="h-5 w-5" />,
 };
 
 const displayServices: ServiceType[] = [
   "CASE_STUDY",
   "REPORT",
   "PPT",
-  "LAB_MANUAL",
+  "LAB_RECORDS",
   "HANDWRITTEN_ASSIGNMENT",
   "NOTES",
+  "INTERNSHIP_RESUME",
+  "SURVEY_REPORTS",
+  "ARCHITECTURAL_VISUALIZATION",
+  "ARCHITECTURAL_DRAFTING",
 ];
 
 export default function LandingPage() {

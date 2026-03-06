@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -14,12 +14,24 @@ import {
   ArrowRight,
   ArrowLeft,
   Loader2,
-  MessageCircle,
   Clock,
   CheckCircle2,
   FileEdit,
   AlertCircle,
   Upload,
+  Briefcase,
+  ClipboardList,
+  Building2,
+  Ruler,
+  Compass,
+  Palette,
+  ShieldCheck,
+  Monitor,
+  Lamp,
+  Layers,
+  Pipette,
+  MapPin,
+  MessageCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +54,9 @@ import {
   serviceLabels,
   serviceDescriptions,
   calculatePrice,
+  calculateOrderSurcharge,
+  getUrgencySurcharge,
+  getPageSurcharge,
   getAdvanceAmount,
   getFinalAmount,
   getUrgencyLabel,
@@ -55,6 +70,13 @@ import { pageEnter } from "@/lib/motion";
 // Types
 // ---------------------------------------------------------------------------
 
+interface ServiceDetail {
+  title: string;
+  description: string;
+  pages: string;
+  slides: string;
+}
+
 interface FormData {
   degree: string;
   specialization: string;
@@ -62,14 +84,16 @@ interface FormData {
   subject: string;
   customSubject: string;
   cantFindSubject: boolean;
-  serviceType: ServiceType | "";
-  title: string;
+  serviceTypes: ServiceType[];
   rollNo: string;
-  description: string;
   frontPageInfo: string;
   deadline: string;
-  pages: string;
-  slides: string;
+  serviceDetails: Record<string, ServiceDetail>;
+  locationType: "tower" | "block" | "";
+  towerNo: string;
+  blockNo: string;
+  roomNo: string;
+  stationeryAgreed: boolean;
 }
 
 interface ProfileData {
@@ -92,7 +116,12 @@ declare global {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PHYSICAL_SERVICES: ServiceType[] = ["LAB_MANUAL", "HANDWRITTEN_ASSIGNMENT"];
+const PHYSICAL_SERVICES: ServiceType[] = [
+  "LAB_RECORDS", "HANDWRITTEN_ASSIGNMENT", "SURVEY_REPORTS",
+  "ARCHITECTURAL_VISUALIZATION", "ARCHITECTURAL_DRAFTING",
+  "ARCHITECTURAL_DESIGN_DEVELOPMENT", "INTERIOR_STYLING_DECORATION",
+  "MATERIALS_FINISHES_PROJECTS", "COLOR_THEORY_APPLICATION",
+];
 const WHATSAPP_NUMBER = "919999999999";
 
 const SERVICE_ICONS: Record<string, React.ElementType> = {
@@ -100,14 +129,30 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   REPORT: FileEdit,
   PPT: Presentation,
   NOTES: StickyNote,
-  LAB_MANUAL: BookMarked,
+  LAB_RECORDS: BookMarked,
   HANDWRITTEN_ASSIGNMENT: PenTool,
   PROTOTYPE_FULL_STACK_WEBSITE: Globe,
+  INTERNSHIP_RESUME: Briefcase,
+  SURVEY_REPORTS: ClipboardList,
+  ARCHITECTURAL_VISUALIZATION: Building2,
+  ARCHITECTURAL_DRAFTING: Ruler,
+  ARCHITECTURAL_DESIGN_DEVELOPMENT: Compass,
+  INTERIOR_DESIGN_PORTFOLIO: Palette,
+  BUILDING_CODES_REGULATIONS: ShieldCheck,
+  INTERIOR_DESIGN_SOFTWARE_VISUALIZATION: Monitor,
+  INTERIOR_STYLING_DECORATION: Lamp,
+  MATERIALS_FINISHES_PROJECTS: Layers,
+  COLOR_THEORY_APPLICATION: Pipette,
 };
 
 const DISPLAY_SERVICES: ServiceType[] = [
   "CASE_STUDY", "REPORT", "PPT", "NOTES",
-  "LAB_MANUAL", "HANDWRITTEN_ASSIGNMENT", "PROTOTYPE_FULL_STACK_WEBSITE",
+  "LAB_RECORDS", "HANDWRITTEN_ASSIGNMENT", "PROTOTYPE_FULL_STACK_WEBSITE",
+  "INTERNSHIP_RESUME", "SURVEY_REPORTS",
+  "ARCHITECTURAL_VISUALIZATION", "ARCHITECTURAL_DRAFTING", "ARCHITECTURAL_DESIGN_DEVELOPMENT",
+  "INTERIOR_DESIGN_PORTFOLIO", "BUILDING_CODES_REGULATIONS",
+  "INTERIOR_DESIGN_SOFTWARE_VISUALIZATION", "INTERIOR_STYLING_DECORATION",
+  "MATERIALS_FINISHES_PROJECTS", "COLOR_THEORY_APPLICATION",
 ];
 
 const STEP_LABELS = ["Select Subject", "Select Service", "Order Details", "Review & Pay"];
@@ -142,12 +187,15 @@ export default function NewOrderPage() {
 
   const [formData, setFormData] = useState<FormData>({
     degree: "", specialization: "", semester: "", subject: "",
-    customSubject: "", cantFindSubject: false, serviceType: "",
-    title: "", rollNo: "", description: "", frontPageInfo: "",
-    deadline: "", pages: "", slides: "",
+    customSubject: "", cantFindSubject: false, serviceTypes: [],
+    rollNo: "", frontPageInfo: "", deadline: "",
+    serviceDetails: {},
+    locationType: "", towerNo: "", blockNo: "", roomNo: "",
+    stationeryAgreed: false,
   });
-  const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const [uploadingRef, setUploadingRef] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -196,17 +244,44 @@ export default function NewOrderPage() {
     }
   }, [specializations, formData.specialization]);
 
-  const isPhysical = PHYSICAL_SERVICES.includes(formData.serviceType as ServiceType);
+  const hasPhysical = formData.serviceTypes.some((s) => PHYSICAL_SERVICES.includes(s));
   const hoursUntilDeadline = useMemo(() => (formData.deadline ? getHoursUntilDeadline(formData.deadline) : 0), [formData.deadline]);
 
-  const totalPrice = useMemo(() => {
-    if (!formData.serviceType || !formData.deadline) return 0;
-    return calculatePrice(
-      formData.serviceType as ServiceType, hoursUntilDeadline,
-      formData.pages ? Number(formData.pages) : undefined,
-      formData.slides ? Number(formData.slides) : undefined
-    );
-  }, [formData.serviceType, formData.deadline, formData.pages, formData.slides, hoursUntilDeadline]);
+  // Base total = sum of base prices (no surcharges)
+  const baseTotal = useMemo(() => {
+    if (formData.serviceTypes.length === 0) return 0;
+    return formData.serviceTypes.reduce((sum, svc) => sum + calculatePrice(svc), 0);
+  }, [formData.serviceTypes]);
+
+  // Per-service page counts (slides count as pages for PPT)
+  const servicePages = useMemo(() => {
+    return formData.serviceTypes.map((svc) => {
+      const detail = formData.serviceDetails[svc];
+      if (svc === "PPT") return Number(detail?.slides) || 0;
+      return Number(detail?.pages) || 0;
+    });
+  }, [formData.serviceTypes, formData.serviceDetails]);
+
+  const totalPages = useMemo(() => servicePages.reduce((s, p) => s + p, 0), [servicePages]);
+
+  // Order-level surcharge: urgency (capped ₹200) + per-service page surcharges (no cap)
+  const surcharge = useMemo(() => {
+    if (!formData.deadline || hoursUntilDeadline <= 0) return 0;
+    return calculateOrderSurcharge(servicePages, hoursUntilDeadline);
+  }, [servicePages, hoursUntilDeadline, formData.deadline]);
+
+  const totalPrice = baseTotal + surcharge;
+
+  // Live Quote shows only after user fills assignment details (pages/slides) AND deadline
+  const canShowQuote = useMemo(() => {
+    if (formData.serviceTypes.length === 0 || !formData.deadline || hoursUntilDeadline <= 0) return false;
+    return formData.serviceTypes.every((svc) => {
+      if (svc === "PROTOTYPE_FULL_STACK_WEBSITE" || svc === "INTERNSHIP_RESUME") return true;
+      const detail = formData.serviceDetails[svc];
+      if (svc === "PPT") return detail?.slides && Number(detail.slides) > 0;
+      return detail?.pages && Number(detail.pages) > 0;
+    });
+  }, [formData.serviceTypes, formData.deadline, formData.serviceDetails, hoursUntilDeadline]);
 
   const advance = useMemo(() => getAdvanceAmount(totalPrice), [totalPrice]);
   const remaining = useMemo(() => getFinalAmount(totalPrice), [totalPrice]);
@@ -217,16 +292,51 @@ export default function NewOrderPage() {
     return formData.degree !== "" && formData.specialization !== "" && formData.semester !== "" && formData.subject !== "";
   }, [formData]);
 
-  const canProceedStep2 = formData.serviceType !== "";
+  const canProceedStep2 = formData.serviceTypes.length > 0;
 
   const canProceedStep3 = useMemo(() => {
-    return formData.title.trim().length > 0 && formData.rollNo.trim().length > 0 && formData.deadline !== "" && hoursUntilDeadline > 0;
-  }, [formData.title, formData.rollNo, formData.deadline, hoursUntilDeadline]);
+    const allTitles = formData.serviceTypes.every((svc) => formData.serviceDetails[svc]?.title?.trim().length > 0);
+    const baseValid = allTitles && formData.rollNo.trim().length > 0 && formData.deadline !== "" && hoursUntilDeadline > 0;
+    if (!baseValid) return false;
+    // Physical services require delivery location + stationery agreement
+    if (hasPhysical) {
+      if (!formData.locationType || !formData.roomNo.trim()) return false;
+      if (formData.locationType === "tower" && !formData.towerNo) return false;
+      if (formData.locationType === "block" && !formData.blockNo.trim()) return false;
+      if (!formData.stationeryAgreed) return false;
+    }
+    return true;
+  }, [formData.serviceTypes, formData.serviceDetails, formData.rollNo, formData.deadline, hoursUntilDeadline, hasPhysical, formData.locationType, formData.towerNo, formData.blockNo, formData.roomNo, formData.stationeryAgreed]);
 
   const goNext = useCallback(() => { setDirection(1); setCurrentStep((s) => Math.min(s + 1, 4)); }, []);
   const goBack = useCallback(() => { setDirection(-1); setCurrentStep((s) => Math.max(s - 1, 1)); }, []);
   const updateField = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
+  }, []);
+  const toggleService = useCallback((svc: ServiceType) => {
+    setFormData((prev) => {
+      const isRemoving = prev.serviceTypes.includes(svc);
+      const newServiceTypes = isRemoving
+        ? prev.serviceTypes.filter((s) => s !== svc)
+        : [...prev.serviceTypes, svc];
+      const newDetails = { ...prev.serviceDetails };
+      if (!isRemoving && !newDetails[svc]) {
+        newDetails[svc] = { title: "", description: "", pages: "", slides: "" };
+      }
+      if (isRemoving) {
+        delete newDetails[svc];
+      }
+      return { ...prev, serviceTypes: newServiceTypes, serviceDetails: newDetails };
+    });
+  }, []);
+  const updateServiceDetail = useCallback((svc: string, field: keyof ServiceDetail, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      serviceDetails: {
+        ...prev.serviceDetails,
+        [svc]: { ...prev.serviceDetails[svc], [field]: value },
+      },
+    }));
   }, []);
 
   const loadRazorpay = useCallback((): Promise<boolean> => {
@@ -244,38 +354,66 @@ export default function NewOrderPage() {
     if (!user) return;
     setLoading(true);
     try {
-      // Upload reference file if selected
+      // Upload reference files if selected
       let referenceFileUrl: string | null = null;
-      if (referenceFile) {
+      if (referenceFiles.length > 0) {
         setUploadingRef(true);
-        const fileForm = new FormData();
-        fileForm.append("file", referenceFile);
-        const uploadRes = await fetch("/api/orders/upload-reference", {
-          method: "POST",
-          body: fileForm,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          referenceFileUrl = uploadData.url;
+        const uploadedUrls: string[] = [];
+        for (const file of referenceFiles) {
+          const fileForm = new FormData();
+          fileForm.append("file", file);
+          const uploadRes = await fetch("/api/orders/upload-reference", {
+            method: "POST",
+            body: fileForm,
+          });
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            uploadedUrls.push(uploadData.url);
+          }
         }
+        referenceFileUrl = uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : null;
         setUploadingRef(false);
+      }
+
+      // Build combined title and description from per-service details
+      const firstDetail = formData.serviceDetails[formData.serviceTypes[0]];
+      const combinedTitle = formData.serviceTypes.length === 1
+        ? firstDetail?.title || ""
+        : formData.serviceTypes.map((svc) => `[${serviceLabels[svc]}] ${formData.serviceDetails[svc]?.title || ""}`).join(" | ");
+      const combinedDescription = formData.serviceTypes.map((svc) => {
+        const d = formData.serviceDetails[svc];
+        return `--- ${serviceLabels[svc]} ---\nTitle: ${d?.title || ""}\n${d?.description || "(No specific instructions)"}`;
+      }).join("\n\n");
+
+      // Build delivery location string for physical services
+      let pickupAddress: string | null = null;
+      if (hasPhysical && formData.locationType && formData.roomNo) {
+        const locationPart = formData.locationType === "tower"
+          ? `Tower ${formData.towerNo}`
+          : `Block ${formData.blockNo}`;
+        pickupAddress = `${locationPart}, Room ${formData.roomNo}`;
       }
 
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: finalSubject, serviceType: formData.serviceType,
-          title: formData.title, description: formData.description,
+          subject: finalSubject, serviceType: formData.serviceTypes[0],
+          serviceTypes: formData.serviceTypes,
+          serviceDetails: formData.serviceDetails,
+          title: combinedTitle,
+          description: combinedDescription,
           rollNo: formData.rollNo, degree: formData.degree,
           specialization: formData.specialization,
           semester: Number(formData.semester),
           frontPageInfo: formData.frontPageInfo || null,
           referenceFileUrl,
           deadline: new Date(formData.deadline).toISOString(),
-          pages: formData.pages ? Number(formData.pages) : null,
-          slides: formData.slides ? Number(formData.slides) : null,
+          pages: firstDetail?.pages ? Number(firstDetail.pages) : null,
+          slides: firstDetail?.slides ? Number(firstDetail.slides) : null,
           totalPrice, advanceAmount: advance,
+          deliveryType: hasPhysical ? "PHYSICAL" : "DIGITAL",
+          pickupAddress,
         }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Failed to create order"); }
@@ -283,10 +421,11 @@ export default function NewOrderPage() {
       setCreatedOrderId(orderData.id);
       const loaded = await loadRazorpay();
       if (!loaded) { toast({ title: "Payment Error", description: "Could not load payment gateway.", variant: "destructive" }); setLoading(false); return; }
+      const serviceDesc = formData.serviceTypes.map((s) => serviceLabels[s]).join(", ");
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: advance * 100, currency: "INR", name: "Zubmit",
-        description: `Advance for ${serviceLabels[formData.serviceType as ServiceType]} - ${finalSubject}`,
+        description: `Advance for ${serviceDesc} - ${finalSubject}`,
         order_id: orderData.razorpayOrderId,
         prefill: { name: user.fullName || user.firstName || "", email: user.emailAddresses[0]?.emailAddress || "" },
         theme: { color: "#e8722a" },
@@ -314,11 +453,9 @@ export default function NewOrderPage() {
       toast({ title: "Error", description: message, variant: "destructive" });
       setLoading(false);
     }
-  }, [user, formData, finalSubject, totalPrice, advance, loadRazorpay, toast, router, referenceFile]);
+  }, [user, formData, finalSubject, totalPrice, advance, loadRazorpay, toast, router, referenceFiles]);
 
-  const whatsappMessage = useMemo(() => {
-    return `Hi! I'd like to place a *${formData.serviceType ? serviceLabels[formData.serviceType as ServiceType] : ""}* order.\n\n*Details:*\n- Subject: ${finalSubject}\n- Degree: ${formData.degree}\n- Semester: ${formData.semester}\n- Roll No: ${formData.rollNo || profile?.roll_no || "N/A"}\n- Name: ${user?.fullName || "N/A"}\n- Email: ${user?.emailAddresses[0]?.emailAddress || "N/A"}\n\nPlease guide me on the next steps.`;
-  }, [formData, finalSubject, user, profile]);
+  const selectedServiceNames = useMemo(() => formData.serviceTypes.map((s) => serviceLabels[s]).join(", "), [formData.serviceTypes]);
 
   // Payment success screen
   if (paymentSuccess) {
@@ -331,7 +468,10 @@ export default function NewOrderPage() {
             </div>
             <h2 className="display mt-6" style={{ fontSize: '36px', color: 'var(--t1)' }}>ORDER PLACED!</h2>
             <p className="font-outfit text-sm mt-3" style={{ color: 'var(--t2)' }}>
-              Your advance payment of {formatPrice(advance)} has been received. We&apos;ll start working on your {serviceLabels[formData.serviceType as ServiceType]} right away.
+              Your advance payment of {formatPrice(advance)} has been received.{" "}
+              {hasPhysical
+                ? "Our delivery boy will visit your room to collect stationery items shortly."
+                : `We'll start working on your ${selectedServiceNames} right away.`}
             </p>
             <div className="flex flex-col gap-3 mt-6">
               <button className="btn btn-p w-full justify-center" onClick={() => router.push(`/order/${createdOrderId}`)}>
@@ -461,16 +601,17 @@ export default function NewOrderPage() {
                   </div>
                 </div>
                 <div className="gradient-sep my-6" />
+                <p className="font-outfit text-xs mb-3" style={{ color: 'var(--t3)' }}>You can select multiple services for a single order</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {DISPLAY_SERVICES.map((svc) => {
                     const Icon = SERVICE_ICONS[svc] || FileText;
-                    const isSelected = formData.serviceType === svc;
+                    const isSelected = formData.serviceTypes.includes(svc);
                     const isPhysicalSvc = PHYSICAL_SERVICES.includes(svc);
-                    const startPrice = formatPrice(calculatePrice(svc, 100));
+                    const startPrice = formatPrice(calculatePrice(svc));
                     return (
                       <button
                         key={svc} type="button"
-                        onClick={() => updateField("serviceType", svc)}
+                        onClick={() => toggleService(svc)}
                         className="relative text-left transition-all duration-200 group"
                         style={{
                           padding: '20px', borderRadius: '16px',
@@ -491,36 +632,26 @@ export default function NewOrderPage() {
                     );
                   })}
                 </div>
-              </div>
-              {isPhysical && formData.serviceType && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                  <div className="card" style={{ padding: '32px', borderColor: 'var(--g-border)', borderLeft: '3px solid var(--g)' }}>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center mx-auto mb-3" style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'var(--g-dim)', border: '1px solid var(--g-border)' }}>
-                        <MessageCircle className="h-8 w-8" style={{ color: 'var(--g)' }} />
-                      </div>
-                      <h3 className="font-outfit font-bold text-lg" style={{ color: 'var(--t1)' }}>Order via WhatsApp</h3>
-                      <p className="font-outfit text-sm mt-1 max-w-sm mx-auto" style={{ color: 'var(--t2)' }}>
-                        Physical orders like <strong>{serviceLabels[formData.serviceType as ServiceType]}</strong> require coordination through WhatsApp.
-                      </p>
-                      <div className="card mt-4 text-left text-sm space-y-1 max-w-md mx-auto" style={{ padding: '16px' }}>
-                        <p><span style={{ color: 'var(--t3)' }}>Subject:</span> {finalSubject}</p>
-                        <p><span style={{ color: 'var(--t3)' }}>Service:</span> {serviceLabels[formData.serviceType as ServiceType]}</p>
-                        <p><span style={{ color: 'var(--t3)' }}>Degree:</span> {formData.degree}</p>
-                        <p><span style={{ color: 'var(--t3)' }}>Semester:</span> {formData.semester}</p>
-                      </div>
-                      <a href={getWhatsAppLink(WHATSAPP_NUMBER, whatsappMessage)} target="_blank" rel="noopener noreferrer" className="block mt-4">
-                        <button className="btn btn-green w-full max-w-md mx-auto justify-center">
-                          <MessageCircle className="h-5 w-5" />Chat on WhatsApp
-                        </button>
-                      </a>
-                    </div>
+                {formData.serviceTypes.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="font-outfit text-xs" style={{ color: 'var(--t3)' }}>Selected ({formData.serviceTypes.length}):</span>
+                    {formData.serviceTypes.map((svc) => (
+                      <span key={svc} className="mono text-[10px] px-2 py-1" style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '6px', color: 'var(--p-bright)' }}>
+                        {serviceLabels[svc]}
+                      </span>
+                    ))}
                   </div>
-                </motion.div>
+                )}
+              </div>
+              {hasPhysical && formData.serviceTypes.length > 0 && (
+                <div className="flex items-center gap-2" style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '10px', padding: '12px 16px' }}>
+                  <MapPin className="h-4 w-4 shrink-0" style={{ color: 'var(--p-bright)' }} />
+                  <span className="font-outfit text-xs" style={{ color: 'var(--p-bright)' }}>Physical services selected — you&apos;ll need to provide your room location and agree to provide stationery items in the next step.</span>
+                </div>
               )}
               <div className="flex items-center justify-between">
                 <button className="btn btn-ghost" onClick={goBack}><ArrowLeft className="h-4 w-4" />Back</button>
-                {!isPhysical && (<button className="btn btn-p" onClick={goNext} disabled={!canProceedStep2}>Continue <ArrowRight className="h-4 w-4" /></button>)}
+                <button className="btn btn-p" onClick={goNext} disabled={!canProceedStep2}>Continue <ArrowRight className="h-4 w-4" /></button>
               </div>
             </div>
           )}
@@ -535,69 +666,213 @@ export default function NewOrderPage() {
                   </div>
                   <div>
                     <h3 className="font-outfit font-bold text-xl" style={{ color: 'var(--t1)' }}>Order Details</h3>
-                    <p className="font-outfit text-sm" style={{ color: 'var(--t2)' }}>Provide the specifics for your {formData.serviceType ? serviceLabels[formData.serviceType as ServiceType] : "order"}</p>
+                    <p className="font-outfit text-sm" style={{ color: 'var(--t2)' }}>Provide the specifics for your {selectedServiceNames || "order"}</p>
                   </div>
                 </div>
                 <div className="gradient-sep my-6" />
                 <div className="space-y-5">
-                  <div><Label className="field-label">Assignment Title *</Label><Input placeholder="e.g. Marketing Strategy Case Study for Tesla" value={formData.title} onChange={(e) => updateField("title", e.target.value)} /></div>
                   <div><Label className="field-label">Roll Number *</Label><Input placeholder="e.g. 22BCS10045" value={formData.rollNo} onChange={(e) => updateField("rollNo", e.target.value)} /></div>
-                  <div><Label className="field-label">Professor Instructions / Description</Label><Textarea placeholder="Any specific instructions, topics to cover, formatting requirements..." value={formData.description} onChange={(e) => updateField("description", e.target.value)} className="min-h-[120px]" /></div>
                   <div><Label className="field-label">Front Page Information</Label><Input placeholder="Professor name, subject code, academic year, etc." value={formData.frontPageInfo} onChange={(e) => updateField("frontPageInfo", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>This will appear on the cover page</p></div>
                   <div style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '12px', padding: '16px' }}>
                     <div className="flex items-start gap-3 mb-3">
                       <Upload className="h-5 w-5 shrink-0 mt-0.5" style={{ color: 'var(--p-bright)' }} />
                       <div>
                         <p className="font-outfit font-semibold text-sm" style={{ color: 'var(--t1)' }}>Reference Files</p>
-                        <p className="font-outfit text-xs mt-1" style={{ color: 'var(--t2)' }}>Upload any reference material, notes, or guidelines (optional)</p>
+                        <p className="font-outfit text-xs mt-1" style={{ color: 'var(--t2)' }}>Upload any reference material, notes, or guidelines (optional, multiple files allowed)</p>
                       </div>
                     </div>
-                    <label
-                      className="flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip,.rar"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          const newFiles = Array.from(files);
+                          setReferenceFiles((prev) => [...prev, ...newFiles]);
+                        }
+                        // Defer reset so React processes the state update first
+                        setTimeout(() => {
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }, 0);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center justify-center gap-2 w-full cursor-pointer transition-all duration-200"
                       style={{
                         padding: '12px 16px', borderRadius: '10px',
-                        border: referenceFile ? '1px solid var(--g-border)' : '1px dashed var(--b2)',
-                        background: referenceFile ? 'var(--g-dim)' : 'var(--hover-bg)',
+                        border: '1px dashed var(--b2)',
+                        background: 'var(--hover-bg)',
                       }}
                     >
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip,.rar"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          setReferenceFile(file);
-                        }}
-                      />
-                      {referenceFile ? (
-                        <span className="font-outfit text-sm font-medium" style={{ color: 'var(--g)' }}>
-                          {referenceFile.name} ({(referenceFile.size / 1024).toFixed(1)} KB)
-                        </span>
-                      ) : (
-                        <span className="font-outfit text-sm" style={{ color: 'var(--t3)' }}>
-                          Click to choose a file
-                        </span>
-                      )}
-                    </label>
-                    {referenceFile && (
-                      <button
-                        type="button"
-                        className="font-outfit text-xs mt-2"
-                        style={{ color: 'var(--r)' }}
-                        onClick={() => setReferenceFile(null)}
-                      >
-                        Remove file
-                      </button>
+                      <Upload className="h-4 w-4" style={{ color: 'var(--t3)' }} />
+                      <span className="font-outfit text-sm" style={{ color: 'var(--t3)' }}>
+                        Click to add files
+                      </span>
+                    </button>
+                    {referenceFiles.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        {referenceFiles.map((file, index) => (
+                          <div
+                            key={`${file.name}-${index}`}
+                            className="flex items-center justify-between"
+                            style={{
+                              padding: '8px 12px', borderRadius: '8px',
+                              background: 'var(--g-dim)', border: '1px solid var(--g-border)',
+                            }}
+                          >
+                            <span className="font-outfit text-sm font-medium truncate mr-2" style={{ color: 'var(--g)' }}>
+                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                            <button
+                              type="button"
+                              className="font-outfit text-xs shrink-0"
+                              style={{ color: 'var(--r)' }}
+                              onClick={() => setReferenceFiles((prev) => prev.filter((_, i) => i !== index))}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {formData.serviceType === "PPT" && (<div><Label className="field-label">Number of Slides</Label><Input type="number" min={1} placeholder="e.g. 15" value={formData.slides} onChange={(e) => updateField("slides", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>Base price covers up to 10 slides</p></div>)}
-                  {formData.serviceType !== "PPT" && formData.serviceType !== "PROTOTYPE_FULL_STACK_WEBSITE" && (<div><Label className="field-label">Number of Pages (optional)</Label><Input type="number" min={1} placeholder="e.g. 10" value={formData.pages} onChange={(e) => updateField("pages", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>Base price covers up to 5 pages</p></div>)}
                   <div><Label className="field-label">Deadline *</Label><Input type="datetime-local" min={getMinDatetime()} value={formData.deadline} onChange={(e) => updateField("deadline", e.target.value)} />{formData.deadline && hoursUntilDeadline <= 0 && (<p className="font-outfit text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--r)' }}><AlertCircle className="h-3 w-3" />Deadline must be in the future</p>)}</div>
                 </div>
               </div>
 
-              {/* Live Price Preview */}
-              {formData.serviceType && formData.deadline && hoursUntilDeadline > 0 && (
+              {/* Delivery Location — shown when any physical service is selected */}
+              {hasPhysical && (
+                <div className="card" style={{ padding: '32px' }}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-center" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--s-dim)', border: '1px solid var(--s-border)' }}>
+                      <MapPin className="h-[18px] w-[18px]" style={{ color: 'var(--s)' }} />
+                    </div>
+                    <div>
+                      <h4 className="font-outfit font-bold text-base" style={{ color: 'var(--t1)' }}>Delivery Location</h4>
+                      <p className="font-outfit text-xs" style={{ color: 'var(--t3)' }}>Our delivery boy will collect stationery items from your room</p>
+                    </div>
+                  </div>
+                  <div className="gradient-sep my-4" />
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="field-label">Where do you stay? *</Label>
+                      <div className="grid grid-cols-2 gap-3 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => { updateField("locationType", "tower"); updateField("blockNo", ""); }}
+                          className="text-left transition-all duration-200"
+                          style={{
+                            padding: '14px 16px', borderRadius: '12px',
+                            background: formData.locationType === "tower" ? 'var(--p-dim)' : 'var(--hover-bg)',
+                            border: formData.locationType === "tower" ? '2px solid var(--p-border)' : '2px solid var(--b1)',
+                          }}
+                        >
+                          <Building2 className="h-5 w-5 mb-1" style={{ color: formData.locationType === "tower" ? 'var(--p-bright)' : 'var(--t3)' }} />
+                          <p className="font-outfit font-semibold text-sm" style={{ color: 'var(--t1)' }}>Tower</p>
+                          <p className="font-outfit text-[11px]" style={{ color: 'var(--t3)' }}>I live in a tower</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { updateField("locationType", "block"); updateField("towerNo", ""); }}
+                          className="text-left transition-all duration-200"
+                          style={{
+                            padding: '14px 16px', borderRadius: '12px',
+                            background: formData.locationType === "block" ? 'var(--p-dim)' : 'var(--hover-bg)',
+                            border: formData.locationType === "block" ? '2px solid var(--p-border)' : '2px solid var(--b1)',
+                          }}
+                        >
+                          <Building2 className="h-5 w-5 mb-1" style={{ color: formData.locationType === "block" ? 'var(--p-bright)' : 'var(--t3)' }} />
+                          <p className="font-outfit font-semibold text-sm" style={{ color: 'var(--t1)' }}>Block</p>
+                          <p className="font-outfit text-[11px]" style={{ color: 'var(--t3)' }}>I live in a block</p>
+                        </button>
+                      </div>
+                    </div>
+                    {formData.locationType === "tower" && (
+                      <div>
+                        <Label className="field-label">Tower Number *</Label>
+                        <Select value={formData.towerNo} onValueChange={(val) => updateField("towerNo", val)}>
+                          <SelectTrigger><SelectValue placeholder="Select tower" /></SelectTrigger>
+                          <SelectContent>
+                            {["1", "2", "3", "4", "5"].map((t) => (
+                              <SelectItem key={t} value={t}>Tower {t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {formData.locationType === "block" && (
+                      <div>
+                        <Label className="field-label">Block Number / Name *</Label>
+                        <Input placeholder="e.g. A, B, C or 1, 2, 3" value={formData.blockNo} onChange={(e) => updateField("blockNo", e.target.value)} />
+                      </div>
+                    )}
+                    {formData.locationType && (
+                      <div>
+                        <Label className="field-label">Room Number *</Label>
+                        <Input placeholder="e.g. 405" value={formData.roomNo} onChange={(e) => updateField("roomNo", e.target.value)} />
+                      </div>
+                    )}
+                    <div className="gradient-sep" />
+                    <div className="flex items-start gap-3 pt-1">
+                      <Checkbox
+                        id="stationeryAgreed"
+                        checked={formData.stationeryAgreed}
+                        onCheckedChange={(checked) => updateField("stationeryAgreed", checked === true)}
+                      />
+                      <Label htmlFor="stationeryAgreed" className="cursor-pointer leading-snug" style={{ fontSize: '13px', color: 'var(--t2)' }}>
+                        I agree to provide all required stationery items (sheets, files, etc.) for my physical assignment. The delivery boy will collect them from my room after advance payment.
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Per-Service Detail Cards */}
+              {formData.serviceTypes.map((svc, idx) => {
+                const Icon = SERVICE_ICONS[svc] || FileText;
+                const detail = formData.serviceDetails[svc] || { title: "", description: "", pages: "", slides: "" };
+                return (
+                  <div key={svc} className="card" style={{ padding: '32px' }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center justify-center" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--p-dim)', border: '1px solid var(--p-border)' }}>
+                        <Icon className="h-[18px] w-[18px]" style={{ color: 'var(--p-bright)' }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-outfit font-bold text-base" style={{ color: 'var(--t1)' }}>{serviceLabels[svc]}</h4>
+                          <span className="mono text-[9px] px-2 py-0.5" style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '6px', color: 'var(--p-bright)' }}>{idx + 1} of {formData.serviceTypes.length}</span>
+                        </div>
+                        <p className="font-outfit text-xs" style={{ color: 'var(--t3)' }}>Provide details for this service</p>
+                      </div>
+                    </div>
+                    <div className="gradient-sep my-4" />
+                    <div className="space-y-4">
+                      <div><Label className="field-label">Title *</Label><Input placeholder={`e.g. ${serviceLabels[svc]} for ${finalSubject}`} value={detail.title} onChange={(e) => updateServiceDetail(svc, "title", e.target.value)} /></div>
+                      <div><Label className="field-label">Instructions / Description</Label><Textarea placeholder="Any specific instructions, topics to cover, formatting requirements..." value={detail.description} onChange={(e) => updateServiceDetail(svc, "description", e.target.value)} className="min-h-[100px]" /></div>
+                      {svc === "PPT" && (<div><Label className="field-label">Number of Slides</Label><Input type="number" min={1} placeholder="e.g. 15" value={detail.slides} onChange={(e) => updateServiceDetail(svc, "slides", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>Base price covers up to 10 slides</p></div>)}
+                      {svc !== "PPT" && svc !== "PROTOTYPE_FULL_STACK_WEBSITE" && (<div><Label className="field-label">Number of Pages (optional)</Label><Input type="number" min={1} placeholder="e.g. 10" value={detail.pages} onChange={(e) => updateServiceDetail(svc, "pages", e.target.value)} /><p className="font-outfit text-xs mt-1" style={{ color: 'var(--t3)' }}>Base price covers up to 5 pages</p></div>)}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Hint when quote is not yet visible */}
+              {formData.serviceTypes.length > 0 && !canShowQuote && (
+                <div className="flex items-center gap-2" style={{ background: 'var(--p-dim)', border: '1px solid var(--p-border)', borderRadius: '10px', padding: '12px 16px' }}>
+                  <Clock className="h-4 w-4 shrink-0" style={{ color: 'var(--p-bright)' }} />
+                  <span className="font-outfit text-xs" style={{ color: 'var(--p-bright)' }}>Fill in the number of pages/slides and deadline for each service to see your live price quote</span>
+                </div>
+              )}
+
+              {/* Live Price Preview — shows after pages/slides + deadline are filled */}
+              {canShowQuote && (
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
                   <div className="card card-glow relative overflow-hidden" style={{ padding: '32px' }}>
                     <div className="absolute top-0 left-0 right-0" style={{ height: '1px', background: 'linear-gradient(90deg, transparent 0%, var(--p) 30%, var(--s) 70%, transparent 100%)', animation: 'borderSweep 4s linear infinite' }} />
@@ -624,7 +899,44 @@ export default function NewOrderPage() {
                         {totalPrice}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 mt-6" style={{ borderTop: '1px solid var(--b1)', paddingTop: '24px' }}>
+                    {/* Detailed breakdown */}
+                    {surcharge > 0 && (
+                      <div style={{ borderRadius: '10px', border: '1px solid var(--b1)', padding: '14px 16px', marginBottom: '16px' }}>
+                        <p className="mono text-[10px] uppercase mb-3" style={{ color: 'var(--t3)', letterSpacing: '0.1em' }}>Price Breakdown</p>
+                        <div className="space-y-2">
+                          {formData.serviceTypes.map((svc) => (
+                            <div key={svc} className="flex justify-between font-outfit text-xs">
+                              <span style={{ color: 'var(--t3)' }}>{serviceLabels[svc]}</span>
+                              <span style={{ color: 'var(--t1)' }}>{formatPrice(calculatePrice(svc))}</span>
+                            </div>
+                          ))}
+                          {getUrgencySurcharge(hoursUntilDeadline) > 0 && (
+                            <div className="flex justify-between font-outfit text-xs">
+                              <span style={{ color: hoursUntilDeadline <= 24 ? 'var(--r)' : 'var(--s)' }}>
+                                Urgent deadline ({Math.floor(hoursUntilDeadline)}h left)
+                              </span>
+                              <span style={{ color: hoursUntilDeadline <= 24 ? 'var(--r)' : 'var(--s)' }}>
+                                +{formatPrice(getUrgencySurcharge(hoursUntilDeadline))}
+                              </span>
+                            </div>
+                          )}
+                          {formData.serviceTypes.map((svc, idx) => {
+                            const pg = servicePages[idx];
+                            const pgSurcharge = getPageSurcharge(pg);
+                            if (pgSurcharge <= 0) return null;
+                            return (
+                              <div key={`pg-${svc}`} className="flex justify-between font-outfit text-xs">
+                                <span style={{ color: 'var(--s)' }}>
+                                  Extra pages — {serviceLabels[svc]} ({pg} pages, {pg - 35} beyond 35)
+                                </span>
+                                <span style={{ color: 'var(--s)' }}>+{formatPrice(pgSurcharge)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 mt-4" style={{ borderTop: '1px solid var(--b1)', paddingTop: '24px' }}>
                       <div className="text-center" style={{ borderRight: '1px solid var(--b1)' }}>
                         <p className="field-label">ADVANCE (40%)</p>
                         <p className="display" style={{ fontSize: '36px', color: 'var(--p-bright)' }}>{advance}</p>
@@ -670,10 +982,9 @@ export default function NewOrderPage() {
                 <div style={{ borderRadius: '12px', border: '1px solid var(--b1)', overflow: 'hidden' }}>
                   {[
                     { label: "Subject", value: finalSubject },
-                    { label: "Service", value: formData.serviceType ? serviceLabels[formData.serviceType as ServiceType] : "" },
+                    { label: formData.serviceTypes.length > 1 ? "Services" : "Service", value: selectedServiceNames },
                     { label: "Degree", value: formData.degree },
                     { label: "Semester", value: `Semester ${formData.semester}` },
-                    { label: "Title", value: formData.title },
                     { label: "Roll No", value: formData.rollNo },
                   ].map((row) => (
                     <div key={row.label} className="flex justify-between items-center px-4 py-3" style={{ borderBottom: '1px solid var(--b1)' }}>
@@ -681,14 +992,49 @@ export default function NewOrderPage() {
                       <span className="font-outfit text-sm font-medium text-right max-w-[60%] truncate" style={{ color: 'var(--t1)' }}>{row.value}</span>
                     </div>
                   ))}
-                  {formData.description && (<div className="px-4 py-3" style={{ borderBottom: '1px solid var(--b1)' }}><span className="font-outfit text-sm block mb-1" style={{ color: 'var(--t3)' }}>Instructions</span><p className="font-outfit text-sm whitespace-pre-wrap" style={{ color: 'var(--t1)' }}>{formData.description}</p></div>)}
-                  <div className="flex justify-between items-center px-4 py-3">
+                  <div className="flex justify-between items-center px-4 py-3" style={{ borderBottom: hasPhysical ? '1px solid var(--b1)' : 'none' }}>
                     <span className="font-outfit text-sm" style={{ color: 'var(--t3)' }}>Deadline</span>
                     <span className="font-outfit text-sm font-medium flex items-center gap-2" style={{ color: 'var(--t1)' }}>
                       <Clock className="h-3.5 w-3.5" />
                       {new Date(formData.deadline).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
+                  {hasPhysical && (
+                    <div className="flex justify-between items-center px-4 py-3">
+                      <span className="font-outfit text-sm" style={{ color: 'var(--t3)' }}>Pickup Location</span>
+                      <span className="font-outfit text-sm font-medium flex items-center gap-2" style={{ color: 'var(--t1)' }}>
+                        <MapPin className="h-3.5 w-3.5" />
+                        {formData.locationType === "tower" ? `Tower ${formData.towerNo}` : `Block ${formData.blockNo}`}, Room {formData.roomNo}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {hasPhysical && (
+                  <div className="flex items-center gap-2 mt-3" style={{ background: 'var(--g-dim)', border: '1px solid var(--g-border)', borderRadius: '10px', padding: '12px 16px' }}>
+                    <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: 'var(--g)' }} />
+                    <span className="font-outfit text-xs" style={{ color: 'var(--g)' }}>You agreed to provide all required stationery items. Our delivery boy will collect them after advance payment.</span>
+                  </div>
+                )}
+                {/* Per-service details summary */}
+                <div className="space-y-3 mt-4">
+                  {formData.serviceTypes.map((svc) => {
+                    const detail = formData.serviceDetails[svc];
+                    const Icon = SERVICE_ICONS[svc] || FileText;
+                    return (
+                      <div key={svc} style={{ borderRadius: '10px', border: '1px solid var(--b1)', padding: '14px 16px' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="h-4 w-4" style={{ color: 'var(--p-bright)' }} />
+                          <span className="font-outfit font-semibold text-sm" style={{ color: 'var(--t1)' }}>{serviceLabels[svc]}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-outfit text-sm"><span style={{ color: 'var(--t3)' }}>Title:</span> <span style={{ color: 'var(--t1)' }}>{detail?.title}</span></p>
+                          {detail?.description && <p className="font-outfit text-xs" style={{ color: 'var(--t2)' }}>{detail.description}</p>}
+                          {detail?.pages && <p className="font-outfit text-xs" style={{ color: 'var(--t3)' }}>Pages: {detail.pages}</p>}
+                          {detail?.slides && <p className="font-outfit text-xs" style={{ color: 'var(--t3)' }}>Slides: {detail.slides}</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -697,8 +1043,20 @@ export default function NewOrderPage() {
                 <div className="absolute top-0 left-0 right-0" style={{ height: '1px', background: 'linear-gradient(90deg, transparent 0%, var(--p) 30%, var(--s) 70%, transparent 100%)', animation: 'borderSweep 4s linear infinite' }} />
                 <h3 className="font-outfit font-bold text-lg" style={{ color: 'var(--t1)' }}>Price Breakdown</h3>
                 <div className="space-y-3 mt-4">
-                  <div className="flex justify-between text-sm font-outfit"><span style={{ color: 'var(--t3)' }}>{formData.serviceType ? serviceLabels[formData.serviceType as ServiceType] : "Service"}</span><span style={{ color: 'var(--t1)' }}>{formatPrice(totalPrice)}</span></div>
-                  <div className="flex justify-between text-sm font-outfit"><span style={{ color: 'var(--t3)' }}>Urgency ({getUrgencyLabel(hoursUntilDeadline)})</span><span style={{ color: hoursUntilDeadline <= 24 ? 'var(--r)' : hoursUntilDeadline <= 48 ? 'var(--s)' : 'var(--g)' }}>Included</span></div>
+                  {formData.serviceTypes.map((svc) => (
+                    <div key={svc} className="flex justify-between text-sm font-outfit"><span style={{ color: 'var(--t3)' }}>{serviceLabels[svc]}</span><span style={{ color: 'var(--t1)' }}>{formatPrice(calculatePrice(svc))}</span></div>
+                  ))}
+                  {getUrgencySurcharge(hoursUntilDeadline) > 0 && (
+                    <div className="flex justify-between text-sm font-outfit"><span style={{ color: 'var(--t3)' }}>Urgency ({getUrgencyLabel(hoursUntilDeadline)}) <span className="text-[10px]">(max ₹200)</span></span><span style={{ color: hoursUntilDeadline <= 24 ? 'var(--r)' : 'var(--s)' }}>+{formatPrice(getUrgencySurcharge(hoursUntilDeadline))}</span></div>
+                  )}
+                  {formData.serviceTypes.map((svc, idx) => {
+                    const pg = servicePages[idx];
+                    const pgSurcharge = getPageSurcharge(pg);
+                    if (pgSurcharge <= 0) return null;
+                    return (
+                      <div key={`pg-${svc}`} className="flex justify-between text-sm font-outfit"><span style={{ color: 'var(--t3)' }}>{serviceLabels[svc]} ({pg} pages)</span><span style={{ color: 'var(--s)' }}>+{formatPrice(pgSurcharge)}</span></div>
+                    );
+                  })}
                   <div className="gradient-sep" />
                   <div className="flex justify-between font-outfit font-bold text-lg"><span style={{ color: 'var(--t1)' }}>Total</span><span className="display" style={{ fontSize: '28px', color: 'var(--t1)' }}>{formatPrice(totalPrice)}</span></div>
                   <div className="gradient-sep" />

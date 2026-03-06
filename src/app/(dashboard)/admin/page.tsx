@@ -166,7 +166,7 @@ const serviceLabels: Record<string, string> = {
   case_study: "Case Study",
   report: "Report",
   ppt: "Presentation",
-  lab_manual: "Lab Manual",
+  lab_records: "Lab Records",
   handwritten_assignment: "Handwritten",
   notes: "Notes",
   other: "Other",
@@ -842,7 +842,7 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
                   <SelectItem value="case_study">Case Study</SelectItem>
                   <SelectItem value="report">Report</SelectItem>
                   <SelectItem value="ppt">Presentation</SelectItem>
-                  <SelectItem value="lab_manual">Lab Manual</SelectItem>
+                  <SelectItem value="lab_records">Lab Records</SelectItem>
                   <SelectItem value="handwritten_assignment">
                     Handwritten
                   </SelectItem>

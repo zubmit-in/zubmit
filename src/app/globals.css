@@ -6,6 +6,7 @@
 
 @layer base {
   :root, .dark {
+    color-scheme: dark;
     --void: #000000;
     --deep: #050505;
     --base: #0a0a0a;
