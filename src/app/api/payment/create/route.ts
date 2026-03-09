@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createCashfreeOrder } from "@/lib/cashfree";
-import { getFinalAmount } from "@/lib/pricing";
+import { getFinalAmount, getAdvanceAmount } from "@/lib/pricing";
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,8 +43,16 @@ export async function POST(req: NextRequest) {
     const payingUserId = order.user_id;
 
     let amount: number;
-    if (type === "FINAL") {
+    let paymentType: string;
+    if (type === "ADVANCE") {
+      if (order.advance_paid) {
+        return NextResponse.json({ error: "Advance already paid" }, { status: 400 });
+      }
+      amount = getAdvanceAmount(order.total_price);
+      paymentType = "advance";
+    } else if (type === "FINAL") {
       amount = getFinalAmount(order.total_price);
+      paymentType = "final";
     } else {
       return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
     }
@@ -71,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
     if (!customerPhone || customerPhone.length < 10) customerPhone = "9999999999";
 
-    const cfOrderId = `zubmit_${orderId.slice(0, 8)}_final_${Date.now()}`;
+    const cfOrderId = `zubmit_${orderId.slice(0, 8)}_${paymentType === "advance" ? "adv" : "final"}_${Date.now()}`;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     const cashfreeOrder = await createCashfreeOrder({
@@ -94,7 +102,7 @@ export async function POST(req: NextRequest) {
       payment_session_id: cashfreeOrder.payment_session_id,
       amount,
       amount_paise: amount * 100,
-      payment_type: "final",
+      payment_type: paymentType,
       status: "created",
     });
 

@@ -35,7 +35,11 @@ interface OrderDetail {
   deadline: string;
   totalPrice: number;
   advancePaid: number;
+  advanceAmount: number;
+  isAdvancePaid: boolean;
   finalPaid: number;
+  finalAmount: number;
+  isFinalPaid: boolean;
   status: string;
   deliveryType: string;
   watermarkFile: string | null;
@@ -106,14 +110,14 @@ export default function OrderDetailPage() {
     }
   }, [searchParams, params.id, toast, fetchOrder]);
 
-  const handleFinalPayment = async () => {
+  const handlePayment = async (type: "ADVANCE" | "FINAL") => {
     if (!order) return;
     setPaying(true);
     try {
       const res = await fetch("/api/payment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id, type: "FINAL" }),
+        body: JSON.stringify({ orderId: order.id, type }),
       });
       const data = await res.json();
 
@@ -300,8 +304,29 @@ export default function OrderDetailPage() {
                 <span className="font-semibold">{formatPrice(order.totalPrice)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Advance Paid</span>
-                <span className="text-green-500 font-medium">{formatPrice(order.advancePaid)}</span>
+                <span className="text-[var(--muted)]">Advance (40%)</span>
+                {order.isAdvancePaid ? (
+                  <span className="text-green-500 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {formatPrice(order.advancePaid)} Paid
+                  </span>
+                ) : (
+                  <span className="text-orange-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {formatPrice(order.advanceAmount)} Unpaid
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Final (60%)</span>
+                {order.isFinalPaid ? (
+                  <span className="text-green-500 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {formatPrice(order.finalPaid)} Paid
+                  </span>
+                ) : (
+                  <span className="text-[var(--muted)]">{formatPrice(order.finalAmount || remaining)}</span>
+                )}
               </div>
               <div className="h-px bg-[var(--card-border)]" />
               <div className="flex justify-between text-sm">
@@ -309,9 +334,32 @@ export default function OrderDetailPage() {
                 <span className="font-bold text-lg">{formatPrice(remaining)}</span>
               </div>
 
-              {order.status === "DELIVERED" && order.finalPaid === 0 && (
+              {/* Pay Advance button — shown when advance not yet paid */}
+              {!order.isAdvancePaid && (
                 <Button
-                  onClick={handleFinalPayment}
+                  onClick={() => handlePayment("ADVANCE")}
+                  className="w-full mt-4"
+                  variant="orange"
+                  disabled={paying}
+                >
+                  {paying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay {formatPrice(order.advanceAmount)} Advance
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Pay Final button — shown when delivered but final not paid */}
+              {order.status === "DELIVERED" && !order.isFinalPaid && order.isAdvancePaid && (
+                <Button
+                  onClick={() => handlePayment("FINAL")}
                   className="w-full mt-4"
                   variant="orange"
                   disabled={paying}
