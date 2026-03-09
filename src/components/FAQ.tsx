@@ -226,9 +226,9 @@ export function FAQ() {
               <h2
                 className="display"
                 style={{
-                  fontSize: "clamp(28px, 5vw, 40px)",
+                  fontSize: "clamp(36px, 5vw, 52px)",
                   color: "var(--t1)",
-                  marginBottom: "8px",
+                  marginBottom: "12px",
                 }}
               >
                 Frequently Asked{" "}
@@ -236,7 +236,7 @@ export function FAQ() {
               </h2>
               <p
                 className="font-outfit"
-                style={{ fontSize: "15px", color: "var(--t2)" }}
+                style={{ fontSize: "16px", color: "var(--t2)", lineHeight: 1.7 }}
               >
                 Everything you need to know about Zubmit
               </p>
