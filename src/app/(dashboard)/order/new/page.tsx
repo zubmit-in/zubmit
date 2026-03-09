@@ -396,7 +396,7 @@ export default function NewOrderPage() {
           pickupAddress,
         }),
       });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Failed to create order"); }
+      if (!res.ok) { const err = await res.json(); throw new Error(err.details || err.error || "Failed to create order"); }
       const orderData = await res.json();
       setCreatedOrderId(orderData.id);
 
