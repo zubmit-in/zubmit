@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Upload,
   Paperclip,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -1273,6 +1274,26 @@ function ManageTasksTab({
     }
   };
 
+  const handleDeleteTask = async (taskId: string, taskTitle: string) => {
+    if (!confirm(`Delete task "${taskTitle}"? This cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/tasks/${taskId}/delete`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Task deleted", description: `"${taskTitle}" has been removed` });
+        setExpanded(null);
+        onRefresh();
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to delete task", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const statusFilters = [
     "all",
     "available",
@@ -1927,6 +1948,31 @@ function ManageTasksTab({
                           Request Revision
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Delete button for available tasks */}
+                  {task.status === "available" && (
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={() => handleDeleteTask(task.id, task.title)}
+                        disabled={actionLoading}
+                        className="btn"
+                        style={{
+                          padding: "8px 16px",
+                          fontSize: "12px",
+                          background: "var(--r-dim)",
+                          color: "var(--r)",
+                          border: "1px solid var(--r-border)",
+                        }}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                        Delete Task
+                      </button>
                     </div>
                   )}
 
