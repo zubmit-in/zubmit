@@ -111,7 +111,7 @@ export async function PATCH(
         worker_id: task.assigned_worker_id,
         stage: "revision_required",
         message:
-          "Changes are required. We will contact you with specific instructions. Please be ready.",
+          notes ? "Changes are required. See details below." : "Changes are required. We will contact you with specific instructions. Please be ready.",
         admin_note: notes || null,
       });
 

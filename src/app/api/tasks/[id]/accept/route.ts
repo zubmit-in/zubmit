@@ -36,6 +36,21 @@ export async function POST(
       );
     }
 
+    // Check if worker already has an active task (must complete current before accepting new)
+    const { data: activeTasks } = await supabaseAdmin
+      .from("available_tasks")
+      .select("id")
+      .eq("assigned_worker_id", userId)
+      .in("status", ["assigned", "under_review", "revision_required"])
+      .limit(1);
+
+    if (activeTasks && activeTasks.length > 0) {
+      return NextResponse.json(
+        { error: "You must complete your current assignment before accepting a new one" },
+        { status: 400 }
+      );
+    }
+
     // Get task from available_tasks (full table, admin access)
     const { data: task, error: taskError } = await supabaseAdmin
       .from("available_tasks")

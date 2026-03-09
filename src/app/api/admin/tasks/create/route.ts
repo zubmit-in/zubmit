@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       worker_pay,
       order_id,
       admin_notes,
+      reference_files,
     } = body;
 
     if (
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
         worker_pay,
         order_id: order_id || null,
         admin_notes: admin_notes || null,
+        reference_files: reference_files || null,
         status: "available",
       })
       .select("id")

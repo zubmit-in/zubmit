@@ -78,7 +78,7 @@ function StatCard({ icon: Icon, label, value, accent, index }: {
             <Icon className="h-[18px] w-[18px]" style={{ color: `var(--${accent})` }} />
           </div>
         </div>
-        <p className="display" style={{ fontSize: '58px', color: 'var(--t1)' }}>
+        <p className="display" style={{ fontSize: 'clamp(32px, 8vw, 58px)', color: 'var(--t1)' }}>
           {isPrice ? (
             <>{value}</>
           ) : (
@@ -152,9 +152,9 @@ export default function DashboardPage() {
         <div>
           <span className="eyebrow">DASHBOARD</span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="display" style={{ fontSize: '56px', color: 'var(--t2)' }}>Hey </span>
-            <span className="display" style={{ fontSize: '56px', color: 'var(--t1)' }}>{user?.firstName || "there"}</span>
-            <span style={{ fontSize: '48px' }}>&#x1F44B;</span>
+            <span className="display" style={{ fontSize: 'clamp(32px, 7vw, 56px)', color: 'var(--t2)' }}>Hey </span>
+            <span className="display" style={{ fontSize: 'clamp(32px, 7vw, 56px)', color: 'var(--t1)' }}>{user?.firstName || "there"}</span>
+            <span style={{ fontSize: 'clamp(28px, 6vw, 48px)' }}>&#x1F44B;</span>
           </div>
           <p className="font-outfit mt-2" style={{ fontSize: '15px', fontWeight: 300, color: 'var(--t2)' }}>
             Here&apos;s what&apos;s happening with your orders
@@ -262,7 +262,7 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : orders.length === 0 ? (
-          <div className="card mt-5 text-center" style={{ padding: '80px 40px' }}>
+          <div className="card mt-5 text-center" style={{ padding: 'clamp(40px, 8vw, 80px) clamp(20px, 5vw, 40px)' }}>
             <div
               className="flex items-center justify-center mx-auto"
               style={{
@@ -274,7 +274,7 @@ export default function DashboardPage() {
             >
               <FileText className="h-8 w-8" style={{ color: 'var(--p-bright)' }} />
             </div>
-            <p className="display mt-6" style={{ fontSize: '36px', color: 'var(--t3)' }}>NO ORDERS YET.</p>
+            <p className="display mt-6" style={{ fontSize: 'clamp(24px, 5vw, 36px)', color: 'var(--t3)' }}>NO ORDERS YET.</p>
             <p className="font-outfit text-sm mt-2" style={{ color: 'var(--t2)' }}>
               Place your first order and get it delivered before your deadline
             </p>

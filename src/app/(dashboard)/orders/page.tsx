@@ -71,7 +71,7 @@ export default function OrdersPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <span className="eyebrow">ORDER TRACKER</span>
-          <h1 className="display mt-2" style={{ fontSize: '52px', color: 'var(--t1)' }}>My Orders</h1>
+          <h1 className="display mt-2" style={{ fontSize: 'clamp(32px, 7vw, 52px)', color: 'var(--t1)' }}>My Orders</h1>
           <p className="mt-1" style={{ fontSize: '14px', fontWeight: 300, color: 'var(--t3)' }}>
             {orders.length} total order{orders.length !== 1 ? "s" : ""}
           </p>
@@ -143,7 +143,7 @@ export default function OrdersPage() {
           ))}
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="card mt-6 text-center" style={{ padding: '80px 40px' }}>
+        <div className="card mt-6 text-center" style={{ padding: 'clamp(40px, 8vw, 80px) clamp(20px, 5vw, 40px)' }}>
           <div
             className="flex items-center justify-center mx-auto"
             style={{
@@ -155,7 +155,7 @@ export default function OrdersPage() {
           >
             <FileText className="h-8 w-8" style={{ color: 'var(--p-bright)' }} />
           </div>
-          <p className="display mt-6" style={{ fontSize: '36px', color: 'var(--t3)' }}>
+          <p className="display mt-6" style={{ fontSize: 'clamp(24px, 5vw, 36px)', color: 'var(--t3)' }}>
             {filter === "ALL" ? "NO ORDERS YET." : `NO ${filter.replace("_", " ")} ORDERS.`}
           </p>
           <p className="text-sm mt-2" style={{ color: 'var(--t2)' }}>

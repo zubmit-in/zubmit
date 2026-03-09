@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendDeliveryEmail } from "@/lib/resend";
 
 export async function GET(
   req: NextRequest,
@@ -112,6 +113,28 @@ export async function PATCH(
     if (error) {
       console.error("Order update error:", error);
       return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
+    }
+
+    // Send delivery email when status changed to DELIVERED
+    if (body.status === "DELIVERED" && order) {
+      try {
+        const { data: customerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", order.user_id)
+          .single();
+
+        if (customerProfile) {
+          await sendDeliveryEmail(customerProfile.email, customerProfile.full_name, {
+            id: order.id,
+            subject: order.subject,
+            totalPrice: order.total_price,
+            advancePaid: order.advance_amount,
+          });
+        }
+      } catch (emailErr) {
+        console.error("Delivery email failed:", emailErr);
+      }
     }
 
     return NextResponse.json({ success: true, order });

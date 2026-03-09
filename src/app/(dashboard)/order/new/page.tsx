@@ -103,14 +103,6 @@ interface ProfileData {
   roll_no: string | null;
 }
 
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void;
-      on: (event: string, callback: () => void) => void;
-    };
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -182,7 +174,6 @@ export default function NewOrderPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -339,17 +330,6 @@ export default function NewOrderPage() {
     }));
   }, []);
 
-  const loadRazorpay = useCallback((): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (typeof window.Razorpay !== "undefined") { resolve(true); return; }
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  }, []);
-
   const handlePayment = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -419,73 +399,26 @@ export default function NewOrderPage() {
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Failed to create order"); }
       const orderData = await res.json();
       setCreatedOrderId(orderData.id);
-      const loaded = await loadRazorpay();
-      if (!loaded) { toast({ title: "Payment Error", description: "Could not load payment gateway.", variant: "destructive" }); setLoading(false); return; }
-      const serviceDesc = formData.serviceTypes.map((s) => serviceLabels[s]).join(", ");
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: advance * 100, currency: "INR", name: "Zubmit",
-        description: `Advance for ${serviceDesc} - ${finalSubject}`,
-        order_id: orderData.razorpayOrderId,
-        prefill: { name: user.fullName || user.firstName || "", email: user.emailAddresses[0]?.emailAddress || "" },
-        theme: { color: "#e8722a" },
-        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
-          try {
-            const verifyRes = await fetch("/api/payment/webhook", {
-              method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature }),
-            });
-            if (verifyRes.ok) {
-              setPaymentSuccess(true);
-              toast({ title: "Payment Successful!", description: "Your order has been placed." });
-              setTimeout(() => { router.push(`/order/${orderData.id}`); }, 2000);
-            } else {
-              toast({ title: "Verification Failed", description: "Payment received but verification failed.", variant: "destructive" });
-            }
-          } catch { toast({ title: "Error", description: "Something went wrong verifying your payment.", variant: "destructive" }); }
-        },
-        modal: { ondismiss: () => { toast({ title: "Payment Cancelled", description: "You can complete the payment later." }); setLoading(false); } },
-      };
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+
+      if (!orderData.paymentSessionId) {
+        throw new Error("Failed to get payment session");
+      }
+
+      // Use Cashfree JS SDK for checkout
+      const { load } = await import("@cashfreepayments/cashfree-js");
+      const cashfree = await load({ mode: process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === "PRODUCTION" ? "production" : "sandbox" });
+      cashfree.checkout({
+        paymentSessionId: orderData.paymentSessionId,
+        redirectTarget: "_self",
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       toast({ title: "Error", description: message, variant: "destructive" });
       setLoading(false);
     }
-  }, [user, formData, finalSubject, totalPrice, advance, loadRazorpay, toast, router, referenceFiles]);
+  }, [user, formData, finalSubject, totalPrice, advance, toast, router, referenceFiles]);
 
   const selectedServiceNames = useMemo(() => formData.serviceTypes.map((s) => serviceLabels[s]).join(", "), [formData.serviceTypes]);
-
-  // Payment success screen
-  if (paymentSuccess) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", duration: 0.6 }}>
-          <div className="card card-glow max-w-md w-full text-center" style={{ padding: '48px 40px' }}>
-            <div className="flex items-center justify-center mx-auto" style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'var(--g-dim)', border: '1px solid var(--g-border)', boxShadow: '0 0 40px rgba(34,217,138,0.3)' }}>
-              <CheckCircle2 className="h-10 w-10" style={{ color: 'var(--g)' }} />
-            </div>
-            <h2 className="display mt-6" style={{ fontSize: '36px', color: 'var(--t1)' }}>ORDER PLACED!</h2>
-            <p className="font-outfit text-sm mt-3" style={{ color: 'var(--t2)' }}>
-              Your advance payment of {formatPrice(advance)} has been received.{" "}
-              {hasPhysical
-                ? "Our delivery boy will visit your room to collect stationery items shortly."
-                : `We'll start working on your ${selectedServiceNames} right away.`}
-            </p>
-            <div className="flex flex-col gap-3 mt-6">
-              <button className="btn btn-p w-full justify-center" onClick={() => router.push(`/order/${createdOrderId}`)}>
-                View Order Details <ArrowRight className="h-4 w-4" />
-              </button>
-              <button className="btn btn-ghost w-full justify-center" onClick={() => router.push("/dashboard")}>
-                Go to Dashboard
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <motion.div {...pageEnter} className="max-w-3xl mx-auto space-y-6">
@@ -874,7 +807,7 @@ export default function NewOrderPage() {
               {/* Live Price Preview — shows after pages/slides + deadline are filled */}
               {canShowQuote && (
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-                  <div className="card card-glow relative overflow-hidden" style={{ padding: '32px' }}>
+                  <div className="card card-glow relative overflow-hidden" style={{ padding: 'clamp(20px, 4vw, 32px)' }}>
                     <div className="absolute top-0 left-0 right-0" style={{ height: '1px', background: 'linear-gradient(90deg, transparent 0%, var(--p) 30%, var(--s) 70%, transparent 100%)', animation: 'borderSweep 4s linear infinite' }} />
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-2">
@@ -893,7 +826,7 @@ export default function NewOrderPage() {
                     <div className="flex items-end justify-center gap-1" style={{ padding: '24px 0' }}>
                       <span className="font-outfit" style={{ fontSize: '30px', fontWeight: 300, color: 'var(--t2)', paddingBottom: '12px' }}>&#8377;</span>
                       <span className="display" style={{
-                        fontSize: '88px',
+                        fontSize: 'clamp(48px, 12vw, 88px)',
                         color: hoursUntilDeadline <= 24 ? 'var(--r)' : hoursUntilDeadline <= 48 ? 'var(--s)' : 'var(--t1)',
                       }}>
                         {totalPrice}
@@ -939,12 +872,12 @@ export default function NewOrderPage() {
                     <div className="grid grid-cols-2 mt-4" style={{ borderTop: '1px solid var(--b1)', paddingTop: '24px' }}>
                       <div className="text-center" style={{ borderRight: '1px solid var(--b1)' }}>
                         <p className="field-label">ADVANCE (40%)</p>
-                        <p className="display" style={{ fontSize: '36px', color: 'var(--p-bright)' }}>{advance}</p>
+                        <p className="display" style={{ fontSize: 'clamp(24px, 5vw, 36px)', color: 'var(--p-bright)' }}>{advance}</p>
                         <p className="font-outfit text-[11px]" style={{ color: 'var(--t3)' }}>Pay now</p>
                       </div>
                       <div className="text-center">
                         <p className="field-label">REMAINING (60%)</p>
-                        <p className="display" style={{ fontSize: '36px', color: 'var(--t2)' }}>{remaining}</p>
+                        <p className="display" style={{ fontSize: 'clamp(24px, 5vw, 36px)', color: 'var(--t2)' }}>{remaining}</p>
                         <p className="font-outfit text-[11px]" style={{ color: 'var(--t3)' }}>After delivery</p>
                       </div>
                     </div>
@@ -1065,15 +998,33 @@ export default function NewOrderPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <button className="btn btn-p w-full justify-center" style={{ padding: '16px' }} onClick={handlePayment} disabled={loading}>
-                  {loading ? (<><Loader2 className="h-5 w-5 animate-spin" />{uploadingRef ? "Uploading files..." : "Processing..."}</>) : (<>Pay {formatPrice(advance)} Advance Now <ArrowRight className="h-5 w-5" /></>)}
+              <button
+                className="btn btn-p w-full justify-center"
+                style={{ padding: '14px 24px', fontSize: '15px', borderRadius: '12px' }}
+                onClick={handlePayment}
+                disabled={loading}
+              >
+                {loading ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" />{uploadingRef ? "Uploading files..." : "Processing..."}</>
+                ) : (
+                  <>Pay {formatPrice(advance)} Advance <ArrowRight className="h-4 w-4" /></>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between mt-4">
+                <button className="btn btn-ghost" style={{ fontSize: '13px', padding: '8px 14px' }} onClick={goBack}>
+                  <ArrowLeft className="h-3.5 w-3.5" />Back
                 </button>
-                <a href={getWhatsAppLink(WHATSAPP_NUMBER, `Hi, I need help with my order for "${finalSubject}".`)} target="_blank" rel="noopener noreferrer" className="block">
-                  <button className="btn btn-ghost w-full justify-center" style={{ fontSize: '13px' }}><MessageCircle className="h-4 w-4" />Need help? Chat with us on WhatsApp</button>
+                <a
+                  href={getWhatsAppLink(WHATSAPP_NUMBER, `Hi, I need help with my order for "${finalSubject}".`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-outfit transition-colors hover:text-[var(--link-hover)]"
+                  style={{ color: 'var(--t3)' }}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />Need help? WhatsApp us
                 </a>
               </div>
-              <div><button className="btn btn-ghost" onClick={goBack}><ArrowLeft className="h-4 w-4" />Back</button></div>
             </div>
           )}
         </motion.div>

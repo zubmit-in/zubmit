@@ -91,7 +91,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div>
         <span className="eyebrow">ACCOUNT</span>
-        <h1 className="display mt-2" style={{ fontSize: '52px', color: 'var(--t1)' }}>Profile</h1>
+        <h1 className="display mt-2" style={{ fontSize: 'clamp(32px, 7vw, 52px)', color: 'var(--t1)' }}>Profile</h1>
         <p className="mt-1" style={{ fontSize: '14px', fontWeight: 300, color: 'var(--t2)' }}>
           Manage your account settings
         </p>
@@ -250,7 +250,7 @@ export default function ProfilePage() {
           </h3>
           <div className="gradient-sep mb-5" />
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {[
               { icon: Mail, label: "Email", value: displayEmail },
               { icon: GraduationCap, label: "Degree", value: profile?.degree || "Not set" },

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -54,16 +54,13 @@ const statusSteps = [
 
 export default function OrderDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [params.id]);
-
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       const res = await fetch(`/api/orders/${params.id}`);
       const data = await res.json();
@@ -75,7 +72,39 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id, toast]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  // Handle return from Cashfree checkout
+  useEffect(() => {
+    const cfOrderId = searchParams.get("cf_order_id");
+    if (cfOrderId) {
+      fetch("/api/payment/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cfOrderId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            toast({ title: "Payment Successful!", description: "Your payment has been confirmed." });
+            fetchOrder();
+          } else {
+            toast({ title: "Payment Pending", description: "Your payment is being processed. It will be confirmed shortly." });
+          }
+        })
+        .catch(() => {
+          toast({ title: "Error", description: "Could not verify payment.", variant: "destructive" });
+        })
+        .finally(() => {
+          // Clean URL
+          window.history.replaceState({}, "", `/order/${params.id}`);
+        });
+    }
+  }, [searchParams, params.id, toast, fetchOrder]);
 
   const handleFinalPayment = async () => {
     if (!order) return;
@@ -88,45 +117,23 @@ export default function OrderDetailPage() {
       });
       const data = await res.json();
 
-      if (data.razorpayOrderId) {
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        script.onload = () => {
-          const options = {
-            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-            amount: data.amount,
-            currency: "INR",
-            name: "Zubmit",
-            description: `Final Payment for ${order.subject}`,
-            order_id: data.razorpayOrderId,
-            handler: async function (response: any) {
-              try {
-                await fetch("/api/payment/webhook", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    razorpay_order_id: response.razorpay_order_id,
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature,
-                    type: "FINAL",
-                  }),
-                });
-                toast({ title: "Payment Successful!", description: "You can now download the original file." });
-                fetchOrder();
-              } catch {
-                toast({ title: "Error", description: "Payment verification failed.", variant: "destructive" });
-              }
-            },
-            theme: { color: "#2563eb" },
-          };
-          const rzp = new (window as any).Razorpay(options);
-          rzp.open();
-        };
-        document.body.appendChild(script);
+      if (!res.ok) {
+        throw new Error(data.details || data.error || "Failed to create payment");
       }
-    } catch {
-      toast({ title: "Error", description: "Failed to initiate payment.", variant: "destructive" });
-    } finally {
+
+      if (data.paymentSessionId) {
+        const { load } = await import("@cashfreepayments/cashfree-js");
+        const cashfree = await load({ mode: process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === "PRODUCTION" ? "production" : "sandbox" });
+        cashfree.checkout({
+          paymentSessionId: data.paymentSessionId,
+          redirectTarget: "_self",
+        });
+      } else {
+        throw new Error("Failed to get payment session");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to initiate payment.";
+      toast({ title: "Error", description: message, variant: "destructive" });
       setPaying(false);
     }
   };
@@ -200,27 +207,27 @@ export default function OrderDetailPage() {
           <CardTitle className="text-base">Order Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between relative">
-            <div className="absolute top-5 left-0 right-0 h-0.5 bg-[var(--card-border)]" />
+          <div className="flex items-center justify-between relative overflow-x-auto pb-2">
+            <div className="absolute top-4 sm:top-5 left-0 right-0 h-0.5 bg-[var(--card-border)]" />
             <div
-              className="absolute top-5 left-0 h-0.5 bg-brand-blue transition-all duration-500"
+              className="absolute top-4 sm:top-5 left-0 h-0.5 bg-brand-blue transition-all duration-500"
               style={{ width: `${(currentStepIdx / (statusSteps.length - 1)) * 100}%` }}
             />
             {statusSteps.map((step, i) => {
               const isCompleted = i <= currentStepIdx;
               const isCurrent = i === currentStepIdx;
               return (
-                <div key={step.key} className="relative flex flex-col items-center z-10">
+                <div key={step.key} className="relative flex flex-col items-center z-10 min-w-[56px]">
                   <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                    className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                       isCompleted
                         ? "bg-brand-blue text-white"
                         : "bg-[var(--card)] border-2 border-[var(--card-border)] text-[var(--muted)]"
                     } ${isCurrent ? "ring-4 ring-brand-blue/20" : ""}`}
                   >
-                    <step.icon className="h-4 w-4" />
+                    <step.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
-                  <span className={`text-xs mt-2 font-medium ${isCompleted ? "text-brand-blue" : "text-[var(--muted)]"}`}>
+                  <span className={`text-[10px] sm:text-xs mt-1.5 sm:mt-2 font-medium text-center ${isCompleted ? "text-brand-blue" : "text-[var(--muted)]"}`}>
                     {step.label}
                   </span>
                 </div>

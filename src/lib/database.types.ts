@@ -237,9 +237,12 @@ export interface Database {
           id: string;
           order_id: string;
           user_id: string;
-          razorpay_order_id: string;
+          razorpay_order_id: string | null;
           razorpay_payment_id: string | null;
           razorpay_signature: string | null;
+          cashfree_order_id: string | null;
+          cf_payment_id: string | null;
+          payment_session_id: string | null;
           amount: number;
           amount_paise: number;
           currency: string;
@@ -254,9 +257,12 @@ export interface Database {
           id?: string;
           order_id: string;
           user_id: string;
-          razorpay_order_id: string;
+          razorpay_order_id?: string | null;
           razorpay_payment_id?: string | null;
           razorpay_signature?: string | null;
+          cashfree_order_id?: string | null;
+          cf_payment_id?: string | null;
+          payment_session_id?: string | null;
           amount: number;
           amount_paise: number;
           currency?: string;
@@ -271,9 +277,12 @@ export interface Database {
           id?: string;
           order_id?: string;
           user_id?: string;
-          razorpay_order_id?: string;
+          razorpay_order_id?: string | null;
           razorpay_payment_id?: string | null;
           razorpay_signature?: string | null;
+          cashfree_order_id?: string | null;
+          cf_payment_id?: string | null;
+          payment_session_id?: string | null;
           amount?: number;
           amount_paise?: number;
           currency?: string;
@@ -491,6 +500,7 @@ export interface Database {
           assigned_at: string | null;
           order_id: string | null;
           admin_notes: string | null;
+          reference_files: { name: string; url: string }[] | null;
           revision_count: number;
           created_at: string;
           updated_at: string;
@@ -513,6 +523,7 @@ export interface Database {
           assigned_at?: string | null;
           order_id?: string | null;
           admin_notes?: string | null;
+          reference_files?: { name: string; url: string }[] | null;
           revision_count?: number;
           created_at?: string;
           updated_at?: string;
@@ -535,6 +546,7 @@ export interface Database {
           assigned_at?: string | null;
           order_id?: string | null;
           admin_notes?: string | null;
+          reference_files?: { name: string; url: string }[] | null;
           revision_count?: number;
           created_at?: string;
           updated_at?: string;
@@ -556,6 +568,7 @@ export interface Database {
           reviewer_notes: string | null;
           reviewed_at: string | null;
           submitted_at: string;
+          file_hash: string | null;
         };
         Insert: {
           id?: string;
@@ -571,6 +584,7 @@ export interface Database {
           reviewer_notes?: string | null;
           reviewed_at?: string | null;
           submitted_at?: string;
+          file_hash?: string | null;
         };
         Update: {
           id?: string;
@@ -586,6 +600,7 @@ export interface Database {
           reviewer_notes?: string | null;
           reviewed_at?: string | null;
           submitted_at?: string;
+          file_hash?: string | null;
         };
         Relationships: [];
       };

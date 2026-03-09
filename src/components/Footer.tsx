@@ -30,7 +30,7 @@ export function Footer() {
           </div>
 
           {/* Links */}
-          <div className="flex gap-16">
+          <div className="flex gap-10 sm:gap-16">
             <div>
               <h4 className="font-semibold text-sm mb-4" style={{ color: 'var(--t1)' }}>Quick Links</h4>
               <ul className="space-y-2.5">

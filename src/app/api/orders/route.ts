@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { calculatePrice, calculateOrderSurcharge, getAdvanceAmount } from "@/lib/pricing";
 import { getHoursUntilDeadline } from "@/lib/utils";
-import { razorpay } from "@/lib/razorpay";
+import { createCashfreeOrder } from "@/lib/cashfree";
 import type { ServiceType } from "@/lib/pricing";
 
 export async function POST(req: NextRequest) {
@@ -12,6 +12,13 @@ export async function POST(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    console.log("[ORDER] Step 0: Auth passed, userId:", userId);
+    console.log("[ORDER] Cashfree env check:", {
+      hasAppId: !!process.env.CASHFREE_APP_ID,
+      hasSecretKey: !!process.env.CASHFREE_SECRET_KEY,
+      environment: process.env.CASHFREE_ENVIRONMENT,
+    });
 
     const body = await req.json();
     const {
@@ -61,6 +68,8 @@ export async function POST(req: NextRequest) {
     const advanceAmount = getAdvanceAmount(totalPrice);
     const finalAmount = totalPrice - advanceAmount;
 
+    console.log("[ORDER] Step 1: Price calculated", { baseTotal, surcharge, totalPrice, advanceAmount, finalAmount });
+
     // Create order in Supabase
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
@@ -81,7 +90,6 @@ export async function POST(req: NextRequest) {
         material_note: materialNote || null,
         reference_file_url: referenceFileUrl || null,
         deadline: new Date(deadline).toISOString(),
-        hours_until_deadline: Math.round(hoursUntilDeadline),
         base_price: totalPrice,
         urgency_multiplier: 1,
         total_price: totalPrice,
@@ -92,44 +100,78 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (orderError || !order) {
-      console.error("Order creation error:", orderError);
-      return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+      console.error("[ORDER] Step 2 FAILED: Supabase order insert error:", orderError);
+      return NextResponse.json({ error: "Failed to create order", details: orderError?.message }, { status: 500 });
     }
 
-    // Create Razorpay order for advance
-    const razorpayOrder = await razorpay.orders.create({
-      amount: advanceAmount * 100, // paise
-      currency: "INR",
-      receipt: `order_${order.id}_advance`,
-      notes: {
-        orderId: order.id,
-        type: "advance",
-        userId,
+    console.log("[ORDER] Step 2: Order created in Supabase", order.id);
+
+    // Fetch user profile for Cashfree customer details
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email, full_name, phone")
+      .eq("id", userId)
+      .single();
+
+    console.log("[ORDER] Step 3: Profile fetched", { email: profile?.email, name: profile?.full_name });
+
+    // Create Cashfree order for advance
+    const cfOrderId = `zubmit_${order.id.slice(0, 8)}_adv_${Date.now()}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    console.log("[ORDER] Step 4: Creating Cashfree order", { cfOrderId, amount: advanceAmount });
+
+    const cashfreeOrder = await createCashfreeOrder({
+      orderId: cfOrderId,
+      orderAmount: advanceAmount,
+      customerDetails: {
+        customer_id: userId,
+        customer_name: profile?.full_name || "Customer",
+        customer_email: profile?.email || "",
+        customer_phone: profile?.phone || "9999999999",
       },
+      returnUrl: `${appUrl}/order/${order.id}?cf_order_id={order_id}`,
+      notifyUrl: `${appUrl}/api/webhooks/cashfree`,
+    });
+
+    console.log("[ORDER] Step 5: Cashfree order created", {
+      sessionId: cashfreeOrder.payment_session_id,
+      paymentLink: cashfreeOrder.payment_link,
     });
 
     // Create payment record in Supabase
-    await supabaseAdmin.from("payments").insert({
+    const { error: paymentError } = await supabaseAdmin.from("payments").insert({
       order_id: order.id,
       user_id: userId,
-      razorpay_order_id: razorpayOrder.id,
+      cashfree_order_id: cfOrderId,
+      payment_session_id: cashfreeOrder.payment_session_id,
       amount: advanceAmount,
       amount_paise: advanceAmount * 100,
       payment_type: "advance",
       status: "created",
     });
 
+    if (paymentError) {
+      console.error("[ORDER] Step 6 FAILED: Payment insert error:", paymentError);
+      return NextResponse.json({ error: "Failed to create payment record", details: paymentError.message }, { status: 500 });
+    }
+
+    console.log("[ORDER] Step 6: Payment record created");
+
     return NextResponse.json({
       success: true,
       id: order.id,
-      razorpayOrderId: razorpayOrder.id,
-      amount: advanceAmount * 100,
+      paymentSessionId: cashfreeOrder.payment_session_id,
+      amount: advanceAmount,
       totalPrice,
       advanceAmount,
     });
   } catch (error) {
-    console.error("Order creation error:", error);
-    return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+    console.error("Order creation error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({
+      error: "Failed to create order",
+      details: error instanceof Error ? error.message : "Unknown error",
+    }, { status: 500 });
   }
 }
 
@@ -160,17 +202,11 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (userRole === "admin") {
-      if (status && status !== "ALL") {
-        query = query.eq("status", status);
-      }
-    } else if (role === "worker" && userRole === "worker") {
-      query = query.eq("status", "PENDING").is("worker_id", null);
-    } else {
-      query = query.eq("user_id", userId);
-      if (status && status !== "ALL") {
-        query = query.eq("status", status);
-      }
+    // "My Orders" always shows only the logged-in user's own orders
+    // Admin sees all orders via the Admin Panel dashboard endpoint
+    query = query.eq("user_id", userId);
+    if (status && status !== "ALL") {
+      query = query.eq("status", status);
     }
 
     const { data: orders, count, error } = await query;

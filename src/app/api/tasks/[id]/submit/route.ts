@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendDigitalSubmissionEmail } from "@/lib/emails/workerEmails";
+import crypto from "crypto";
 
 export async function POST(
   req: NextRequest,
@@ -61,9 +62,30 @@ export async function POST(
       );
     }
 
+    // Compute file hash for duplicate detection
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+    // Check if submission already exists (revision case) — do this BEFORE uploading
+    const { data: existingSubmission } = await supabaseAdmin
+      .from("task_submissions")
+      .select("id, revision_count, file_hash")
+      .eq("task_id", taskId)
+      .eq("worker_id", userId)
+      .single();
+
+    if (existingSubmission) {
+      // Block identical file on revision — worker must make actual changes
+      if (existingSubmission.file_hash && existingSubmission.file_hash === fileHash) {
+        return NextResponse.json(
+          { error: "This file is identical to your previous submission. Please make the required changes before resubmitting." },
+          { status: 400 }
+        );
+      }
+    }
+
     // Upload file to task-submissions bucket
     const fileName = `${taskId}/${userId}-${Date.now()}-${file.name}`;
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from("task-submissions")
@@ -84,17 +106,10 @@ export async function POST(
       data: { publicUrl: fileUrl },
     } = supabaseAdmin.storage.from("task-submissions").getPublicUrl(fileName);
 
-    // Check if submission already exists (revision case)
-    const { data: existingSubmission } = await supabaseAdmin
-      .from("task_submissions")
-      .select("id, revision_count")
-      .eq("task_id", taskId)
-      .eq("worker_id", userId)
-      .single();
-
     const now = new Date().toISOString();
 
     if (existingSubmission) {
+
       // Update existing submission (revision)
       await supabaseAdmin
         .from("task_submissions")
@@ -102,6 +117,7 @@ export async function POST(
           file_url: fileUrl,
           file_name: file.name,
           file_size: file.size,
+          file_hash: fileHash,
           revision_count: (existingSubmission.revision_count || 0) + 1,
           review_status: "pending",
           submitted_at: now,
@@ -123,6 +139,7 @@ export async function POST(
         file_url: fileUrl,
         file_name: file.name,
         file_size: file.size,
+        file_hash: fileHash,
         review_status: "pending",
         submitted_at: now,
       });

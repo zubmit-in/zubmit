@@ -17,6 +17,8 @@ import {
   Home,
   Lock,
   FileSearch,
+  Download,
+  Paperclip,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -70,6 +72,7 @@ interface AvailableTask {
   status: string;
   assigned_worker_id?: string;
   assigned_at?: string;
+  reference_files?: { name: string; url: string }[] | null;
   revision_count: number;
   created_at: string;
   updated_at: string;
@@ -224,6 +227,9 @@ export default function EarningsPage() {
     {}
   );
 
+  // My Tasks tab filter
+  const [myTasksTab, setMyTasksTab] = useState<"active" | "under_review" | "revision" | "completed">("active");
+
   // Modal state
   const [acceptModal, setAcceptModal] = useState<AvailableTask | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -338,6 +344,11 @@ export default function EarningsPage() {
       fetchStagesForTask(task.id);
     });
   }, [myTasks, fetchStagesForTask]);
+
+  // Check if worker has an active task (must complete before accepting new)
+  const hasActiveTask = myTasks.some((t) =>
+    ["assigned", "under_review", "revision_required"].includes(t.status)
+  );
 
   // Supabase Realtime subscription
   useEffect(() => {
@@ -503,10 +514,14 @@ export default function EarningsPage() {
           variant: "destructive",
         });
       }
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof TypeError && err.message.includes("FILE_CHANGED")
+          ? "The file was modified after selection. Please re-select the file and try again."
+          : "Upload failed. Please try again.";
       toast({
         title: "Error",
-        description: "Upload failed.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -583,7 +598,7 @@ export default function EarningsPage() {
           <span className="eyebrow">FREELANCER PROGRAM</span>
           <h1
             className="display mt-2"
-            style={{ fontSize: "52px", color: "var(--t1)" }}
+            style={{ fontSize: "clamp(28px, 7vw, 52px)", color: "var(--t1)" }}
           >
             Earn While You Study
           </h1>
@@ -843,7 +858,7 @@ export default function EarningsPage() {
         <span className="eyebrow">FREELANCER</span>
         <h1
           className="display mt-2"
-          style={{ fontSize: "52px", color: "var(--t1)" }}
+          style={{ fontSize: "clamp(32px, 7vw, 52px)", color: "var(--t1)" }}
         >
           Earnings
         </h1>
@@ -893,7 +908,7 @@ export default function EarningsPage() {
             >
               <p
                 className="display"
-                style={{ fontSize: "42px", color: stat.color }}
+                style={{ fontSize: "clamp(28px, 6vw, 42px)", color: stat.color }}
               >
                 {stat.value}
               </p>
@@ -1142,6 +1157,45 @@ export default function EarningsPage() {
                           ~{task.page_count} pages
                         </span>
                       )}
+                      {task.reference_files && Array.isArray(task.reference_files) && task.reference_files.length > 0 && (
+                        <div className="mt-3">
+                          <p
+                            className="font-outfit font-semibold text-xs uppercase mb-2"
+                            style={{ color: "var(--t3)", letterSpacing: "0.1em" }}
+                          >
+                            REFERENCE FILES
+                          </p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {(task.reference_files as { name: string; url: string }[]).map((file: { name: string; url: string }, idx: number) => (
+                              <a
+                                key={idx}
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-outfit"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  padding: "8px 12px",
+                                  background: "rgba(37,99,235,0.06)",
+                                  border: "1px solid rgba(37,99,235,0.15)",
+                                  borderRadius: "6px",
+                                  fontSize: "13px",
+                                  color: "#60a5fa",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                  {file.name}
+                                </span>
+                                <Download className="h-3.5 w-3.5 flex-shrink-0" style={{ opacity: 0.6 }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Deadline */}
@@ -1186,9 +1240,12 @@ export default function EarningsPage() {
                         <button
                           onClick={() => setAcceptModal(task)}
                           className="btn btn-p"
+                          disabled={hasActiveTask}
+                          title={hasActiveTask ? "Complete your current assignment first" : undefined}
                           style={{
                             fontSize: "13px",
                             padding: "8px 20px",
+                            ...(hasActiveTask ? { opacity: 0.5, cursor: "not-allowed" } : {}),
                           }}
                         >
                           <CheckCircle className="h-3.5 w-3.5" /> Accept
@@ -1244,8 +1301,83 @@ export default function EarningsPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4 mt-5">
-              {myTasks.map((task) => {
+            <>
+              {/* Tab filters */}
+              {(() => {
+                const activeTasks = myTasks.filter((t) => ["assigned"].includes(t.status));
+                const reviewTasks = myTasks.filter((t) => ["submitted", "under_review"].includes(t.status));
+                const revisionTasks = myTasks.filter((t) => ["revision_required"].includes(t.status));
+                const completedTasks = myTasks.filter((t) => ["approved", "payment_processing", "paid"].includes(t.status));
+
+                const tabs = [
+                  { id: "active" as const, label: "Active", count: activeTasks.length, color: "var(--p)" },
+                  { id: "under_review" as const, label: "Under Review", count: reviewTasks.length, color: "var(--s)" },
+                  { id: "revision" as const, label: "Revision", count: revisionTasks.length, color: "var(--r)" },
+                  { id: "completed" as const, label: "Completed", count: completedTasks.length, color: "var(--g)" },
+                ];
+
+                const filteredTasks =
+                  myTasksTab === "active" ? activeTasks
+                  : myTasksTab === "under_review" ? reviewTasks
+                  : myTasksTab === "revision" ? revisionTasks
+                  : completedTasks;
+
+                return (
+                  <>
+                    <div className="flex gap-2 mt-5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                      {tabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setMyTasksTab(tab.id)}
+                          className="font-outfit font-semibold shrink-0"
+                          style={{
+                            fontSize: "13px",
+                            padding: "8px 16px",
+                            borderRadius: "10px",
+                            border: `1px solid ${myTasksTab === tab.id ? tab.color : "var(--b2)"}`,
+                            background: myTasksTab === tab.id ? `${tab.color}12` : "transparent",
+                            color: myTasksTab === tab.id ? tab.color : "var(--t3)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {tab.label}
+                          {tab.count > 0 && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                background: myTasksTab === tab.id ? tab.color : "var(--b2)",
+                                color: myTasksTab === tab.id ? "#fff" : "var(--t3)",
+                                borderRadius: "6px",
+                                padding: "1px 6px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {tab.count}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {filteredTasks.length === 0 ? (
+                      <div
+                        className="card mt-4 text-center"
+                        style={{ padding: "36px 32px" }}
+                      >
+                        <p
+                          className="font-outfit text-sm"
+                          style={{ color: "var(--t3)" }}
+                        >
+                          No tasks in this category
+                        </p>
+                      </div>
+                    ) : (
+            <div className="space-y-4 mt-4">
+              {filteredTasks.map((task) => {
                 const stages = taskStages[task.id] || [];
                 const statusBorderColor =
                   task.status === "assigned"
@@ -1339,6 +1471,52 @@ export default function EarningsPage() {
                           Your earning: ₹{task.worker_pay}
                         </p>
                       </div>
+
+                      {/* Description, pages, reference files */}
+                      {task.description && (
+                        <p
+                          className="font-outfit mt-3"
+                          style={{ fontSize: "14px", color: "var(--t3)", whiteSpace: "pre-wrap" }}
+                        >
+                          {task.description}
+                        </p>
+                      )}
+                      {task.page_count && (
+                        <span
+                          className="font-outfit text-xs px-2 py-0.5 rounded mt-2 inline-block"
+                          style={{ background: "var(--hover-bg)", color: "var(--t2)", border: "1px solid var(--b1)" }}
+                        >
+                          ~{task.page_count} pages
+                        </span>
+                      )}
+                      {task.reference_files && Array.isArray(task.reference_files) && task.reference_files.length > 0 && (
+                        <div className="mt-3">
+                          <p className="font-outfit font-semibold text-xs uppercase mb-2" style={{ color: "var(--t3)", letterSpacing: "0.1em" }}>
+                            REFERENCE FILES
+                          </p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {(task.reference_files as { name: string; url: string }[]).map((file: { name: string; url: string }, idx: number) => (
+                              <a
+                                key={idx}
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-outfit"
+                                style={{
+                                  display: "flex", alignItems: "center", gap: "8px",
+                                  padding: "8px 12px", background: "rgba(37,99,235,0.06)",
+                                  border: "1px solid rgba(37,99,235,0.15)", borderRadius: "6px",
+                                  fontSize: "13px", color: "#60a5fa", textDecoration: "none",
+                                }}
+                              >
+                                <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{file.name}</span>
+                                <Download className="h-3.5 w-3.5 flex-shrink-0" style={{ opacity: 0.6 }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Deadline */}
                       <div className="mt-5">
@@ -1471,6 +1649,24 @@ export default function EarningsPage() {
                                     >
                                       {stage.message}
                                     </p>
+                                    {isRevision && stage.admin_note && (
+                                      <div
+                                        className="font-outfit mt-2"
+                                        style={{
+                                          fontSize: "13px",
+                                          color: "var(--t1)",
+                                          background: "rgba(255,71,87,0.06)",
+                                          border: "1px solid rgba(255,71,87,0.15)",
+                                          borderRadius: "8px",
+                                          padding: "10px 12px",
+                                        }}
+                                      >
+                                        <p style={{ fontSize: "11px", color: "var(--r)", fontWeight: 600, marginBottom: "4px" }}>
+                                          REVISION DETAILS
+                                        </p>
+                                        <p style={{ whiteSpace: "pre-wrap" }}>{stage.admin_note}</p>
+                                      </div>
+                                    )}
                                     {isRevision &&
                                       task.revision_count > 0 && (
                                         <p
@@ -1723,6 +1919,11 @@ export default function EarningsPage() {
                 );
               })}
             </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </div>
 
@@ -2007,7 +2208,7 @@ function ProfileSetupForm({ onSuccess }: { onSuccess: () => void }) {
         <span className="eyebrow">ONE-TIME SETUP</span>
         <h1
           className="display mt-2"
-          style={{ fontSize: "44px", color: "var(--t1)" }}
+          style={{ fontSize: "clamp(28px, 6vw, 44px)", color: "var(--t1)" }}
         >
           Complete Your Freelancer Profile
         </h1>

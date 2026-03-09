@@ -525,6 +525,30 @@
   color: var(--t1) !important;
 }
 
+/* ========== RESPONSIVE OVERRIDES ========== */
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: 12px;
+  }
+  .btn {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+  .eyebrow {
+    font-size: 11px;
+  }
+}
+
+/* Hide scrollbar for horizontal tab scroll containers */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* ========== UTILITY CLASSES ========== */
 
 @layer utilities {

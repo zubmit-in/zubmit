@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabaseAdmin.storage
-      .from("reference-files")
+      .from("reference_files")
       .upload(fileName, fileBuffer, {
         contentType: file.type,
         upsert: false,
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     const {
       data: { publicUrl },
-    } = supabaseAdmin.storage.from("reference-files").getPublicUrl(fileName);
+    } = supabaseAdmin.storage.from("reference_files").getPublicUrl(fileName);
 
     return NextResponse.json({ url: publicUrl });
   } catch (error) {

@@ -23,6 +23,8 @@ import {
   X,
   Download,
   ExternalLink,
+  Upload,
+  Paperclip,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -139,11 +141,16 @@ interface Order {
   roll_no: string;
   deadline: string;
   total_price: number;
+  advance_amount: number;
+  final_amount: number;
+  advance_paid: boolean;
+  final_paid: boolean;
   status: string;
   description?: string;
   front_page_info?: string;
   material_note?: string;
   reference_file_url?: string;
+  created_at: string;
 }
 
 interface Student {
@@ -164,12 +171,19 @@ interface Student {
 
 const serviceLabels: Record<string, string> = {
   case_study: "Case Study",
+  CASE_STUDY: "Case Study",
   report: "Report",
+  REPORT: "Report Writing",
   ppt: "Presentation",
+  PPT: "Presentation",
   lab_records: "Lab Records",
+  LAB_MANUAL: "Lab Manual",
   handwritten_assignment: "Handwritten",
+  HANDWRITTEN: "Handwritten",
   notes: "Notes",
+  NOTES: "Notes",
   other: "Other",
+  OTHER: "Other",
 };
 
 const statusColors: Record<string, string> = {
@@ -181,6 +195,17 @@ const statusColors: Record<string, string> = {
   approved: "var(--g)",
   payment_processing: "var(--p)",
   paid: "var(--g)",
+  cancelled: "var(--t3)",
+};
+
+const orderStatusColors: Record<string, string> = {
+  pending: "#f59e0b",
+  PENDING: "#f59e0b",
+  ASSIGNED: "var(--s)",
+  IN_PROGRESS: "var(--p)",
+  DELIVERED: "#818cf8",
+  COMPLETED: "var(--g)",
+  CANCELLED: "var(--t3)",
   cancelled: "var(--t3)",
 };
 
@@ -196,7 +221,7 @@ function formatIST(dateStr: string) {
 // MAIN COMPONENT
 // =============================================
 
-type Tab = "overview" | "create" | "tasks" | "workers";
+type Tab = "overview" | "create" | "tasks" | "workers" | "orders";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -289,6 +314,7 @@ export default function AdminPage() {
     { id: "create", label: "Create Task", icon: Plus },
     { id: "tasks", label: "Manage Tasks", icon: ClipboardList },
     { id: "workers", label: "Workers", icon: Users },
+    { id: "orders", label: "All Orders", icon: FileText },
   ];
 
   return (
@@ -366,6 +392,9 @@ export default function AdminPage() {
       )}
       {activeTab === "workers" && (
         <WorkersTab workers={workers} onRefresh={fetchData} />
+      )}
+      {activeTab === "orders" && (
+        <OrdersTab orders={orders} students={students} onRefresh={fetchData} />
       )}
     </motion.div>
   );
@@ -608,6 +637,8 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
   const [workerPay, setWorkerPay] = useState("");
   const [orderId, setOrderId] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  const [referenceFiles, setReferenceFiles] = useState<{ name: string; url: string }[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const specializations = degree ? getSpecializations(degree) : [];
   const maxSemester = degree ? getMaxSemester(degree) : 0;
@@ -657,6 +688,15 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
       return;
     }
 
+    if (new Date(realDeadline) <= new Date()) {
+      toast({
+        title: "Invalid deadline",
+        description: "Deadline must be in the future.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/admin/tasks/create", {
@@ -676,6 +716,7 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
           worker_pay: parseFloat(workerPay),
           order_id: orderId || null,
           admin_notes: adminNotes || null,
+          reference_files: referenceFiles.length > 0 ? referenceFiles : null,
         }),
       });
 
@@ -696,6 +737,7 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
         setWorkerPay("");
         setOrderId("");
         setAdminNotes("");
+        setReferenceFiles([]);
         onCreated();
       } else {
         toast({
@@ -873,6 +915,7 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
                 type="datetime-local"
                 value={realDeadline}
                 onChange={(e) => setRealDeadline(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
                 className="font-outfit"
                 style={inputStyle}
               />
@@ -945,6 +988,111 @@ function CreateTaskTab({ onCreated }: { onCreated: () => void }) {
                 style={inputStyle}
               />
             </div>
+          </div>
+
+          {/* Reference Files (Optional) */}
+          <div>
+            <label className="field-label">REFERENCE FILES (OPTIONAL)</label>
+            <p style={{ fontSize: "11px", color: "var(--t3)", marginBottom: "8px" }}>
+              Attach reference materials for workers. PDF, DOCX, PPTX, ZIP, images accepted.
+            </p>
+            <div
+              style={{
+                border: "2px dashed var(--border)",
+                borderRadius: "8px",
+                padding: "16px",
+                textAlign: "center",
+              }}
+            >
+              <label
+                className="font-outfit"
+                style={{
+                  cursor: uploadingFiles ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  fontSize: "13px",
+                  color: "var(--t2)",
+                  opacity: uploadingFiles ? 0.5 : 1,
+                }}
+              >
+                {uploadingFiles ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {uploadingFiles ? "Uploading..." : "Choose Files"}
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  disabled={uploadingFiles}
+                  accept=".pdf,.docx,.pptx,.zip,.doc,.ppt,.jpg,.jpeg,.png,.webp"
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    setUploadingFiles(true);
+                    try {
+                      const formData = new FormData();
+                      for (let i = 0; i < files.length; i++) {
+                        formData.append("files", files[i]);
+                      }
+                      const res = await fetch("/api/admin/tasks/upload", {
+                        method: "POST",
+                        body: formData,
+                      });
+                      const data = await res.json();
+                      if (data.files) {
+                        setReferenceFiles((prev) => [...prev, ...data.files]);
+                      }
+                    } catch {
+                      toast({ title: "Upload failed", variant: "destructive" });
+                    } finally {
+                      setUploadingFiles(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {referenceFiles.length > 0 && (
+              <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                {referenceFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      background: "var(--surface)",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                      <Paperclip className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--t3)" }} />
+                      <span
+                        className="font-outfit"
+                        style={{ fontSize: "13px", color: "var(--t1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        {file.name}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setReferenceFiles((prev) => prev.filter((_, i) => i !== idx))}
+                      style={{ color: "var(--r)", background: "none", border: "none", cursor: "pointer", padding: "2px" }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Submit */}
@@ -1024,6 +1172,28 @@ function ManageTasksTab({
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleOrderStatusUpdate = async (orderId: string, newStatus: string) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Order status updated", description: `Status changed to ${newStatus.replace(/_/g, " ")}` });
+        onRefresh();
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to update order status", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleReview = async (
@@ -1620,10 +1790,24 @@ function ManageTasksTab({
                             label="Order Total"
                             value={`₹${order.total_price}`}
                           />
-                          <InfoItem
-                            label="Order Status"
-                            value={order.status.replace(/_/g, " ")}
-                          />
+                          <div>
+                            <p style={{ fontSize: "10px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                              Order Status
+                            </p>
+                            <Select value={order.status} onValueChange={(val) => handleOrderStatusUpdate(order.id, val)}>
+                              <SelectTrigger style={{ height: "32px", fontSize: "12px", background: "var(--bg)", border: "1px solid var(--b2)" }}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PENDING">Pending</SelectItem>
+                                <SelectItem value="ASSIGNED">Assigned</SelectItem>
+                                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                                <SelectItem value="COMPLETED">Completed</SelectItem>
+                                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <InfoItem
                             label="Client Deadline"
                             value={formatIST(order.deadline)}
@@ -2098,6 +2282,296 @@ function WorkersTab({
           );
         })}
       </div>
+    </motion.div>
+  );
+}
+
+// =============================================
+// ORDERS TAB
+// =============================================
+
+function OrdersTab({
+  orders,
+  students,
+  onRefresh,
+}: {
+  orders: Order[];
+  students: Student[];
+  onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const [filter, setFilter] = useState("all");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const orderFilters = [
+    { id: "all", label: "All" },
+    { id: "PENDING", label: "Pending" },
+    { id: "ASSIGNED", label: "Assigned" },
+    { id: "IN_PROGRESS", label: "In Progress" },
+    { id: "DELIVERED", label: "Delivered" },
+    { id: "COMPLETED", label: "Completed" },
+  ];
+
+  const filtered = filter === "all"
+    ? orders
+    : orders.filter((o) => o.status === filter || o.status === filter.toLowerCase());
+
+  const getStudent = (userId: string) =>
+    students.find((s) => s.id === userId) || null;
+
+  const getCount = (status: string) =>
+    orders.filter((o) => o.status === status || o.status === status.toLowerCase()).length;
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Status updated", description: `Order status → ${newStatus.replace(/_/g, " ")}` });
+        onRefresh();
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <motion.div variants={fadeUp} initial="hidden" animate="show">
+      {/* Filters */}
+      <div className="flex gap-2 flex-wrap mb-6">
+        {orderFilters.map((f) => {
+          const count = f.id === "all" ? orders.length : getCount(f.id);
+          const isActive = filter === f.id;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className="font-outfit"
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: 500,
+                background: isActive ? "var(--surface)" : "transparent",
+                color: isActive ? "var(--t1)" : "var(--t3)",
+                border: isActive ? "1px solid var(--b2)" : "1px solid transparent",
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {f.label}{" "}
+              <span style={{ opacity: 0.6 }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="card" style={{ padding: "48px", textAlign: "center" }}>
+          <p style={{ color: "var(--t3)", fontSize: "14px" }}>No orders found</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((order) => {
+            const isExpanded = expanded === order.id;
+            const student = getStudent(order.user_id);
+            const statusColor = orderStatusColors[order.status] || "var(--t3)";
+
+            return (
+              <div
+                key={order.id}
+                className="card"
+                style={{ padding: 0, overflow: "hidden" }}
+              >
+                {/* Header row */}
+                <button
+                  onClick={() => setExpanded(isExpanded ? null : order.id)}
+                  className="w-full text-left"
+                  style={{ padding: "16px 20px", cursor: "pointer", background: "none", border: "none" }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <h3 className="font-outfit font-semibold truncate" style={{ fontSize: "14px", color: "var(--t1)" }}>
+                        {order.title}
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          background: `${statusColor}15`,
+                          color: statusColor,
+                          textTransform: "uppercase",
+                          flexShrink: 0,
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {order.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp style={{ width: "16px", height: "16px", color: "var(--t3)", flexShrink: 0 }} />
+                    ) : (
+                      <ChevronDown style={{ width: "16px", height: "16px", color: "var(--t3)", flexShrink: 0 }} />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: "12px", color: "var(--t3)" }}>
+                    <span>{order.subject}</span>
+                    <span>·</span>
+                    <span>{serviceLabels[order.service_type] || order.service_type}</span>
+                    <span>·</span>
+                    <span style={{ color: "var(--g)" }}>₹{order.total_price}</span>
+                    <span>·</span>
+                    <span>Due: {formatIST(order.deadline)}</span>
+                    {student && (
+                      <>
+                        <span>·</span>
+                        <span>{student.full_name}</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div style={{ padding: "0 20px 20px", borderTop: "1px solid var(--b2)" }}>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                      {/* Student Info */}
+                      {student && (
+                        <>
+                          <InfoItem label="Student Name" value={student.full_name} />
+                          <InfoItem label="Email" value={student.email} />
+                          <InfoItem label="Phone" value={student.phone || "N/A"} />
+                          <InfoItem label="College" value={student.college_name} />
+                        </>
+                      )}
+
+                      {/* Order Info */}
+                      <InfoItem label="Order ID" value={order.id.slice(0, 8)} />
+                      <InfoItem label="Service" value={serviceLabels[order.service_type] || order.service_type} />
+                      <InfoItem label="Delivery" value={order.delivery_type} />
+                      <InfoItem label="Degree" value={order.degree} />
+                      <InfoItem label="Semester" value={order.semester?.toString() || "N/A"} />
+                      <InfoItem label="Roll No" value={order.roll_no} />
+                      <InfoItem label="Deadline" value={formatIST(order.deadline)} />
+                      <InfoItem label="Placed" value={formatIST(order.created_at)} />
+                    </div>
+
+                    {/* Payment Info */}
+                    <div
+                      style={{
+                        marginTop: "16px",
+                        padding: "16px",
+                        borderRadius: "10px",
+                        border: "1px solid var(--b2)",
+                        background: "var(--hover-bg-subtle)",
+                      }}
+                    >
+                      <p className="font-outfit font-semibold mb-3" style={{ fontSize: "13px", color: "var(--t1)" }}>
+                        Payment
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <InfoItem label="Total" value={`₹${order.total_price}`} />
+                        <InfoItem label="Advance (40%)" value={order.advance_paid ? `₹${order.advance_amount} ✅` : `₹${order.advance_amount} ❌`} />
+                        <InfoItem label="Final (60%)" value={order.final_paid ? `₹${order.final_amount} ✅` : `₹${order.final_amount} ⏳`} />
+                        <InfoItem label="Advance Status" value={order.advance_paid ? "Paid" : "Unpaid"} />
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    {order.description && (
+                      <div style={{ marginTop: "12px" }}>
+                        <p style={{ fontSize: "10px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                          Description
+                        </p>
+                        <p style={{ fontSize: "13px", color: "var(--t2)", whiteSpace: "pre-wrap" }}>{order.description}</p>
+                      </div>
+                    )}
+
+                    {order.front_page_info && (
+                      <div style={{ marginTop: "8px" }}>
+                        <p style={{ fontSize: "10px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                          Front Page Info
+                        </p>
+                        <p style={{ fontSize: "13px", color: "var(--t2)" }}>{order.front_page_info}</p>
+                      </div>
+                    )}
+
+                    {order.material_note && (
+                      <div style={{ marginTop: "8px" }}>
+                        <p style={{ fontSize: "10px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                          Material Note
+                        </p>
+                        <p style={{ fontSize: "13px", color: "var(--t2)" }}>{order.material_note}</p>
+                      </div>
+                    )}
+
+                    {order.reference_file_url && (
+                      <a
+                        href={order.reference_file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-ghost mt-3"
+                        style={{ padding: "6px 14px", fontSize: "12px", display: "inline-flex", gap: "6px" }}
+                      >
+                        <ExternalLink style={{ width: "12px", height: "12px" }} />
+                        View Reference File
+                      </a>
+                    )}
+
+                    {/* Status Update */}
+                    <div
+                      style={{
+                        marginTop: "16px",
+                        padding: "16px",
+                        borderRadius: "10px",
+                        border: "1px solid var(--p-border)",
+                        background: "var(--p-dim)",
+                      }}
+                    >
+                      <p className="font-outfit font-semibold mb-3" style={{ fontSize: "13px", color: "var(--t1)" }}>
+                        Update Order Status
+                      </p>
+                      <div className="flex gap-3 items-end flex-wrap">
+                        <div className="flex-1" style={{ minWidth: "200px" }}>
+                          <Select value={order.status} onValueChange={(val) => handleStatusUpdate(order.id, val)}>
+                            <SelectTrigger style={{ height: "36px", fontSize: "13px", background: "var(--bg)", border: "1px solid var(--b2)" }}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PENDING">Pending</SelectItem>
+                              <SelectItem value="ASSIGNED">Assigned</SelectItem>
+                              <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                              <SelectItem value="DELIVERED">Delivered</SelectItem>
+                              <SelectItem value="COMPLETED">Completed</SelectItem>
+                              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {actionLoading && <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--p)" }} />}
+                      </div>
+                      <p style={{ fontSize: "11px", color: "var(--t3)", marginTop: "8px" }}>
+                        Set to &quot;Delivered&quot; → user sees &quot;Pay 60%&quot; button. Set to &quot;Completed&quot; after final payment received.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 }

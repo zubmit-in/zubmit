@@ -69,7 +69,7 @@ export async function GET() {
     // Get orders with student info (to link tasks → orders → students)
     const { data: orders } = await supabaseAdmin
       .from("orders")
-      .select("id, user_id, title, subject, degree, specialization, semester, service_type, delivery_type, roll_no, deadline, total_price, status, description, front_page_info, material_note, reference_file_url")
+      .select("id, user_id, title, subject, degree, specialization, semester, service_type, delivery_type, roll_no, deadline, total_price, advance_amount, final_amount, advance_paid, final_paid, status, description, front_page_info, material_note, reference_file_url, created_at")
       .order("created_at", { ascending: false });
 
     // Get student profiles (customers who placed orders)
