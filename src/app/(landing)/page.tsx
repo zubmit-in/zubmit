@@ -31,6 +31,7 @@ import {
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Portfolio } from "@/components/Portfolio";
+import { FAQ } from "@/components/FAQ";
 import { getStartingPrice, serviceLabels, serviceDescriptions } from "@/lib/pricing";
 import type { ServiceType } from "@/lib/pricing";
 import { formatPrice } from "@/lib/utils";
@@ -403,6 +404,8 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      <FAQ />
 
       <Footer />
     </div>

@@ -38,6 +38,7 @@ export function Navbar() {
               { href: "/#portfolio", label: "Our Work" },
               { href: "/#services", label: "Services" },
               { href: "/#earn", label: "Earn" },
+              { href: "/#faq", label: "FAQ" },
             ].map((link) => (
               <Link
                 key={link.href}
@@ -89,6 +90,7 @@ export function Navbar() {
               { href: "/#portfolio", label: "Our Work" },
               { href: "/#services", label: "Services" },
               { href: "/#earn", label: "Earn" },
+              { href: "/#faq", label: "FAQ" },
             ].map((link) => (
               <Link
                 key={link.href}
