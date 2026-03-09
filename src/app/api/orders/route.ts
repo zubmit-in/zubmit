@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { calculatePrice, calculateOrderSurcharge, getAdvanceAmount } from "@/lib/pricing";
 import { getHoursUntilDeadline } from "@/lib/utils";
@@ -113,7 +113,23 @@ export async function POST(req: NextRequest) {
       .eq("id", userId)
       .single();
 
-    console.log("[ORDER] Step 3: Profile fetched", { email: profile?.email, name: profile?.full_name });
+    // Get phone from Clerk if not in profile
+    let customerPhone = profile?.phone || "";
+    let customerEmail = profile?.email || "";
+    let customerName = profile?.full_name || "Customer";
+    if (!customerPhone) {
+      try {
+        const clerk = await clerkClient();
+        const clerkUser = await clerk.users.getUser(userId);
+        customerPhone = clerkUser.phoneNumbers?.[0]?.phoneNumber || "";
+        if (!customerEmail) customerEmail = clerkUser.emailAddresses?.[0]?.emailAddress || "";
+        if (customerName === "Customer") customerName = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Customer";
+      } catch { /* fallback to profile data */ }
+    }
+    // Cashfree requires a valid 10-digit phone — use placeholder only as last resort
+    if (!customerPhone || customerPhone.length < 10) customerPhone = "9999999999";
+
+    console.log("[ORDER] Step 3: Profile fetched", { email: customerEmail, name: customerName, phone: customerPhone });
 
     // Create Cashfree order for advance
     const cfOrderId = `zubmit_${order.id.slice(0, 8)}_adv_${Date.now()}`;
@@ -126,9 +142,9 @@ export async function POST(req: NextRequest) {
       orderAmount: advanceAmount,
       customerDetails: {
         customer_id: userId,
-        customer_name: profile?.full_name || "Customer",
-        customer_email: profile?.email || "",
-        customer_phone: profile?.phone || "9999999999",
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
       },
       returnUrl: `${appUrl}/order/${order.id}?cf_order_id={order_id}`,
       notifyUrl: `${appUrl}/api/webhooks/cashfree`,

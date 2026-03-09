@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createCashfreeOrder } from "@/lib/cashfree";
 import { getFinalAmount } from "@/lib/pricing";
@@ -56,6 +56,21 @@ export async function POST(req: NextRequest) {
       .eq("id", payingUserId)
       .single();
 
+    // Get phone from Clerk if not in profile
+    let customerPhone = payerProfile?.phone || "";
+    let customerEmail = payerProfile?.email || "";
+    let customerName = payerProfile?.full_name || "Customer";
+    if (!customerPhone) {
+      try {
+        const clerk = await clerkClient();
+        const clerkUser = await clerk.users.getUser(payingUserId);
+        customerPhone = clerkUser.phoneNumbers?.[0]?.phoneNumber || "";
+        if (!customerEmail) customerEmail = clerkUser.emailAddresses?.[0]?.emailAddress || "";
+        if (customerName === "Customer") customerName = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Customer";
+      } catch { /* fallback to profile data */ }
+    }
+    if (!customerPhone || customerPhone.length < 10) customerPhone = "9999999999";
+
     const cfOrderId = `zubmit_${orderId.slice(0, 8)}_final_${Date.now()}`;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -64,9 +79,9 @@ export async function POST(req: NextRequest) {
       orderAmount: amount,
       customerDetails: {
         customer_id: payingUserId,
-        customer_name: payerProfile?.full_name || "Customer",
-        customer_email: payerProfile?.email || "",
-        customer_phone: payerProfile?.phone || "9999999999",
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
       },
       returnUrl: `${appUrl}/order/${orderId}?cf_order_id={order_id}`,
       notifyUrl: `${appUrl}/api/webhooks/cashfree`,
