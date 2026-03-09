@@ -231,7 +231,8 @@ export function FAQ() {
                   marginBottom: "8px",
                 }}
               >
-                Frequently Asked Questions
+                Frequently Asked{" "}
+                <span style={{ color: "var(--p)" }}>Questions</span>
               </h2>
               <p
                 className="font-outfit"
