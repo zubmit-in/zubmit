@@ -18,12 +18,12 @@ const faqs: { category: Category; q: string; a: string }[] = [
   {
     category: "General",
     q: "What is Zubmit?",
-    a: "Zubmit is a platform where students can get their college assignments completed by verified individuals from their own university. The platform manages the entire process including matching requests, quality verification, and delivery.",
+    a: "Zubmit is a platform where students can get their college assignments completed easily and reliably. Our expert team manages the entire process including request matching, quality checks, and delivery.",
   },
   {
     category: "General",
     q: "How does it work?",
-    a: "Place an order with your assignment details, pay a small advance, and a verified worker completes it before your deadline. You receive the completed work digitally or physically.",
+    a: "Place an order with your assignment details, pay a small advance, and our verified worker completes it before your deadline. You receive the completed work digitally or physically.",
   },
   {
     category: "General",
@@ -44,7 +44,7 @@ const faqs: { category: Category; q: string; a: string }[] = [
   {
     category: "Payments",
     q: "How much advance do I need to pay?",
-    a: "You pay 50% as advance when placing the order. The remaining 50% is paid after you receive the completed assignment.",
+    a: "You pay 40% as advance when placing the order. The remaining 60% is paid after you receive the completed assignment.",
   },
   {
     category: "Payments",
