@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const payingUserId = order.user_id;
 
     let amount: number;
-    let paymentType: string;
+    let paymentType: "advance" | "final";
     if (type === "ADVANCE") {
       if (order.advance_paid) {
         return NextResponse.json({ error: "Advance already paid" }, { status: 400 });
