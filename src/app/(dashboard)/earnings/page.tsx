@@ -164,7 +164,10 @@ const rules = [
   "Once you accept a task you cannot abandon it. Abandoning accepted tasks results in permanent ban.",
   "Your details (name, room, UPI) are used only for task coordination and payment.",
   "Zubmit can withhold payment for unsatisfactory work.",
-  "For physical assignments, be available in your room when our team comes to collect.",
+  "Some assignments will be provided in physical form through our delivery boy. You must be present at your room/location to receive the assignment materials.",
+  "You must sign a consent form for assignment safety and security before receiving the materials.",
+  "After receiving the materials, you are fully responsible for keeping them safe. Do not damage, misuse, or tamper with the assignment materials.",
+  "If any material is lost, misplaced, or mishandled, strict action will be taken. Any violation may result in a permanent ban from the freelancing program.",
   "By joining you agree to all these terms fully.",
 ];
 
