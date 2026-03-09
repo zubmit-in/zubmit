@@ -211,7 +211,9 @@ export function FAQ() {
             style={{
               display: "flex",
               flexDirection: "column",
+              alignItems: "center",
               gap: "32px",
+              textAlign: "center",
             }}
           >
             <div>
@@ -244,6 +246,7 @@ export function FAQ() {
               style={{
                 display: "flex",
                 flexWrap: "wrap",
+                justifyContent: "center",
                 gap: "10px",
               }}
             >
