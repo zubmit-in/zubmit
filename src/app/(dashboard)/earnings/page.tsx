@@ -86,6 +86,7 @@ interface ReviewStage {
   stage: string;
   message: string;
   admin_note?: string;
+  review_files?: { name: string; url: string }[];
   created_at: string;
 }
 
@@ -1649,7 +1650,7 @@ export default function EarningsPage() {
                                     >
                                       {stage.message}
                                     </p>
-                                    {isRevision && stage.admin_note && (
+                                    {isRevision && (stage.admin_note || (stage.review_files && stage.review_files.length > 0)) && (
                                       <div
                                         className="font-outfit mt-2"
                                         style={{
@@ -1664,7 +1665,50 @@ export default function EarningsPage() {
                                         <p style={{ fontSize: "11px", color: "var(--r)", fontWeight: 600, marginBottom: "4px" }}>
                                           REVISION DETAILS
                                         </p>
-                                        <p style={{ whiteSpace: "pre-wrap" }}>{stage.admin_note}</p>
+                                        {stage.admin_note && (
+                                          <p style={{ whiteSpace: "pre-wrap" }}>{stage.admin_note}</p>
+                                        )}
+                                        {stage.review_files && stage.review_files.length > 0 && (
+                                          <div className="mt-2 flex flex-wrap gap-2">
+                                            {stage.review_files.map((file: { name: string; url: string }, fIdx: number) => {
+                                              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+                                              return isImage ? (
+                                                <a
+                                                  key={fIdx}
+                                                  href={file.url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="block rounded-lg overflow-hidden"
+                                                  style={{ border: "1px solid var(--b2)", width: "100px", height: "100px" }}
+                                                >
+                                                  <img src={file.url} alt={file.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                </a>
+                                              ) : (
+                                                <a
+                                                  key={fIdx}
+                                                  href={file.url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="flex items-center gap-1.5"
+                                                  style={{
+                                                    fontSize: "11px",
+                                                    color: "var(--p)",
+                                                    background: "var(--hover-bg)",
+                                                    border: "1px solid var(--b1)",
+                                                    borderRadius: "6px",
+                                                    padding: "6px 10px",
+                                                    textDecoration: "none",
+                                                  }}
+                                                >
+                                                  <span>📎</span>
+                                                  <span style={{ maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                    {file.name}
+                                                  </span>
+                                                </a>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                     {isRevision &&
@@ -2060,6 +2104,7 @@ function ProfileSetupForm({ onSuccess }: { onSuccess: () => void }) {
   // Form fields
   const [fullName, setFullName] = useState("");
   const [contact, setContact] = useState("");
+  const [phonePrefilled, setPhonePrefilled] = useState(false);
   const [university, setUniversity] = useState("");
   const [rollNo, setRollNo] = useState("");
   const [degree, setDegree] = useState("");
@@ -2086,6 +2131,10 @@ function ProfileSetupForm({ onSuccess }: { onSuccess: () => void }) {
           }
           if (data.profile.full_name && !fullName) {
             setFullName(data.profile.full_name);
+          }
+          if (data.profile.phone && !contact) {
+            setContact(data.profile.phone);
+            setPhonePrefilled(true);
           }
         }
       } catch {
@@ -2244,6 +2293,7 @@ function ProfileSetupForm({ onSuccess }: { onSuccess: () => void }) {
             onChange={setContact}
             placeholder="+91 XXXXX XXXXX"
             error={errors.contact}
+            readOnly={phonePrefilled}
           />
           <FieldInput
             label="UNIVERSITY / COLLEGE NAME"

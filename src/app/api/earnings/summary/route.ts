@@ -21,12 +21,12 @@ export async function GET() {
       0
     );
 
-    // Pending amount (pending + processing earnings)
+    // Pending amount (only after admin approves — status is "processing")
     const { data: pendingEarnings } = await supabaseAdmin
       .from("worker_earnings")
       .select("amount")
       .eq("worker_id", userId)
-      .in("status", ["pending", "processing"]);
+      .eq("status", "processing");
 
     const pendingAmount = (pendingEarnings || []).reduce(
       (sum, e) => sum + e.amount,

@@ -25,9 +25,10 @@ export async function PATCH(
 
     const { id: taskId } = await params;
     const body = await req.json();
-    const { action, notes } = body as {
+    const { action, notes, review_files } = body as {
       action: "approve" | "revision";
       notes?: string;
+      review_files?: { name: string; url: string }[];
     };
 
     // Get task
@@ -113,6 +114,7 @@ export async function PATCH(
         message:
           notes ? "Changes are required. See details below." : "Changes are required. We will contact you with specific instructions. Please be ready.",
         admin_note: notes || null,
+        review_files: review_files && review_files.length > 0 ? review_files : null,
       });
 
       return NextResponse.json({ success: true });

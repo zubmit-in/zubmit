@@ -214,7 +214,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseAdmin
       .from("orders")
-      .select("id, subject, service_type, status, total_price, deadline, created_at, title, degree, semester", { count: "exact" })
+      .select("id, subject, service_type, status, total_price, deadline, created_at, title, degree, semester, advance_paid", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -232,12 +232,33 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
     }
 
+    // Calculate stats from ALL user orders (not just the limited query)
+    const { data: allOrders } = await supabaseAdmin
+      .from("orders")
+      .select("status, total_price, advance_paid")
+      .eq("user_id", userId);
+
+    const allOrdersList = allOrders || [];
+    const statsData = {
+      pending: allOrdersList.filter((o) => {
+        const s = (o.status || "").toUpperCase();
+        return ["PENDING", "ASSIGNED", "IN_PROGRESS"].includes(s);
+      }).length,
+      delivered: allOrdersList.filter((o) => {
+        const s = (o.status || "").toUpperCase();
+        return ["DELIVERED", "COMPLETED"].includes(s);
+      }).length,
+      totalSpent: allOrdersList
+        .filter((o) => o.advance_paid === true)
+        .reduce((sum, o) => sum + (o.total_price || 0), 0),
+    };
+
     // Map snake_case to camelCase for frontend compatibility
     const mappedOrders = (orders || []).map((o) => ({
       id: o.id,
       subject: o.subject,
       serviceType: o.service_type,
-      status: o.status,
+      status: (o.status || "").toUpperCase(),
       totalPrice: o.total_price,
       deadline: o.deadline,
       createdAt: o.created_at,
@@ -246,7 +267,7 @@ export async function GET(req: NextRequest) {
       semester: o.semester,
     }));
 
-    return NextResponse.json({ orders: mappedOrders, total: count || 0 });
+    return NextResponse.json({ orders: mappedOrders, total: count || 0, stats: statsData });
   } catch (error) {
     console.error("Orders fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });

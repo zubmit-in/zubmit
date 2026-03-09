@@ -122,17 +122,14 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.orders) {
         setOrders(data.orders);
-        const total = data.orders.length;
-        const pending = data.orders.filter((o: OrderSummary) =>
-          ["PENDING", "ASSIGNED", "IN_PROGRESS"].includes(o.status)
-        ).length;
-        const delivered = data.orders.filter((o: OrderSummary) =>
-          ["DELIVERED", "COMPLETED"].includes(o.status)
-        ).length;
-        const totalSpent = data.orders.reduce(
-          (sum: number, o: OrderSummary) => sum + o.totalPrice, 0
-        );
-        setStats({ total: data.total || total, pending, delivered, totalSpent });
+        if (data.stats) {
+          setStats({
+            total: data.total || 0,
+            pending: data.stats.pending,
+            delivered: data.stats.delivered,
+            totalSpent: data.stats.totalSpent,
+          });
+        }
       }
     } catch { /* */ }
     finally { setLoading(false); }

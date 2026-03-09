@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Portfolio } from "@/components/Portfolio";
 import { getStartingPrice, serviceLabels, serviceDescriptions } from "@/lib/pricing";
 import type { ServiceType } from "@/lib/pricing";
 import { formatPrice } from "@/lib/utils";
@@ -206,6 +207,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ==================== PORTFOLIO ==================== */}
+      <Portfolio />
+
       {/* ==================== SERVICES ==================== */}
       <section id="services" style={{ padding: '120px 0' }}>
         <div className="max-w-[1100px] mx-auto px-6">
@@ -299,12 +303,12 @@ export default function LandingPage() {
               </motion.div>
 
               <motion.p variants={fadeUp} className="mt-5 max-w-[440px]" style={{ fontSize: '16px', fontWeight: 400, color: 'var(--t2)', lineHeight: 1.7 }}>
-                Earn &#8377;90 to &#8377;150 per assignment as a Zubmit freelancer. No experience needed, just quality work and meeting deadlines.
+                Earn &#8377;90 to &#8377;200 per assignment as a Zubmit freelancer. No experience needed, just quality work and meeting deadlines.
               </motion.p>
 
               <motion.div variants={fadeUp} className="mt-8">
                 <span className="display" style={{ fontSize: '52px', color: 'var(--t1)' }}>
-                  &#8377;90 - ₹150
+                  &#8377;90 - ₹200
                 </span>
                 <p className="eyebrow mt-2">PER ASSIGNMENT</p>
               </motion.div>
@@ -386,7 +390,7 @@ export default function LandingPage() {
                 </button>
               </Link>
               <a
-                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "91XXXXXXXXXX"}`}
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "918109224530"}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

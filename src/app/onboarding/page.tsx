@@ -58,7 +58,7 @@ export default function OnboardingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.collegeName || !form.degree || !form.semester) {
+    if (!form.collegeName || !form.degree || !form.semester || !form.phone) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields.",
@@ -78,7 +78,7 @@ export default function OnboardingPage() {
           specialization: form.specialization || null,
           semester: parseInt(form.semester),
           rollNo: form.rollNo || null,
-          phone: form.phone || null,
+          phone: form.phone,
         }),
       });
 
@@ -258,13 +258,14 @@ export default function OnboardingPage() {
             </div>
 
             <div>
-              <label htmlFor="phone" className="field-label">Phone Number (Optional)</label>
+              <label htmlFor="phone" className="field-label">Phone Number *</label>
               <input
                 id="phone"
                 type="tel"
                 placeholder="+91 XXXXX XXXXX"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                required
                 className="font-outfit"
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = 'var(--p)'}

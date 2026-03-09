@@ -18,7 +18,7 @@ export function Footer() {
               Your Deadline. Our Problem. India&apos;s trusted academic assignment assistance platform for college students.
             </p>
             <a
-              href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "91XXXXXXXXXX"}`}
+              href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "918109224530"}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm transition-colors hover:text-[var(--link-hover)]"
@@ -37,6 +37,7 @@ export function Footer() {
                 {[
                   { href: "/", label: "Home" },
                   { href: "/#how-it-works", label: "How It Works" },
+                  { href: "/#portfolio", label: "Our Work" },
                   { href: "/#services", label: "Services" },
                   { href: "/#earn", label: "Earn Money" },
                 ].map((link) => (

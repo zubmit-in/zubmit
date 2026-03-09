@@ -1150,6 +1150,8 @@ function ManageTasksTab({
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewFiles, setReviewFiles] = useState<File[]>([]);
+  const [uploadingReview, setUploadingReview] = useState(false);
   const [upiTxnId, setUpiTxnId] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -1203,10 +1205,31 @@ function ManageTasksTab({
   ) => {
     setActionLoading(true);
     try {
+      // Upload review files if any (only for revision)
+      let uploadedFiles: { name: string; url: string }[] = [];
+      if (action === "revision" && reviewFiles.length > 0) {
+        setUploadingReview(true);
+        const formData = new FormData();
+        reviewFiles.forEach((f) => formData.append("files", f));
+        const uploadRes = await fetch("/api/admin/tasks/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.files) {
+          uploadedFiles = uploadData.files;
+        }
+        setUploadingReview(false);
+      }
+
       const res = await fetch(`/api/admin/tasks/${taskId}/review`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, notes: reviewNotes || undefined }),
+        body: JSON.stringify({
+          action,
+          notes: reviewNotes || undefined,
+          review_files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -1214,6 +1237,7 @@ function ManageTasksTab({
           title: action === "approve" ? "Approved" : "Revision requested",
         });
         setReviewNotes("");
+        setReviewFiles([]);
         setExpanded(null);
         onRefresh();
       } else {
@@ -1231,6 +1255,7 @@ function ManageTasksTab({
       });
     } finally {
       setActionLoading(false);
+      setUploadingReview(false);
     }
   };
 
@@ -1914,6 +1939,74 @@ function ManageTasksTab({
                           resize: "vertical" as const,
                         }}
                       />
+
+                      {/* File attachments for revision */}
+                      <div className="mb-3">
+                        <div>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*,.pdf,.doc,.docx"
+                            id="review-file-input"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                const newFiles = Array.from(files);
+                                setReviewFiles((prev) => [...prev, ...newFiles]);
+                              }
+                              e.target.value = "";
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById("review-file-input")?.click()}
+                            className="flex items-center gap-2 font-outfit"
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--t2)",
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              border: "1px dashed var(--b2)",
+                              background: "var(--hover-bg)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                            Attach files (screenshots, PDFs)
+                          </button>
+                        </div>
+                        {reviewFiles.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {reviewFiles.map((file, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-1.5 font-outfit"
+                                style={{
+                                  fontSize: "11px",
+                                  color: "var(--t2)",
+                                  background: "var(--hover-bg)",
+                                  border: "1px solid var(--b1)",
+                                  borderRadius: "6px",
+                                  padding: "4px 8px",
+                                }}
+                              >
+                                <Paperclip className="h-3 w-3" style={{ color: "var(--p)" }} />
+                                <span style={{ maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {file.name}
+                                </span>
+                                <button
+                                  onClick={() => setReviewFiles((prev) => prev.filter((_, i) => i !== idx))}
+                                  style={{ color: "var(--r)", marginLeft: "2px" }}
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex gap-3">
                         <button
                           onClick={() => handleReview(task.id, "approve")}
@@ -1930,7 +2023,7 @@ function ManageTasksTab({
                         </button>
                         <button
                           onClick={() => handleReview(task.id, "revision")}
-                          disabled={actionLoading}
+                          disabled={actionLoading || uploadingReview}
                           className="btn"
                           style={{
                             padding: "8px 18px",
@@ -1940,12 +2033,12 @@ function ManageTasksTab({
                             border: "1px solid var(--r-border)",
                           }}
                         >
-                          {actionLoading ? (
+                          {actionLoading || uploadingReview ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
                             <XCircle className="h-3 w-3" />
                           )}
-                          Request Revision
+                          {uploadingReview ? "Uploading..." : "Request Revision"}
                         </button>
                       </div>
                     </div>

@@ -35,6 +35,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center" style={{ gap: '32px' }}>
             {[
               { href: "/#how-it-works", label: "How It Works" },
+              { href: "/#portfolio", label: "Our Work" },
               { href: "/#services", label: "Services" },
               { href: "/#earn", label: "Earn" },
             ].map((link) => (
@@ -85,6 +86,7 @@ export function Navbar() {
           <div className="px-4 py-4 space-y-1">
             {[
               { href: "/#how-it-works", label: "How It Works" },
+              { href: "/#portfolio", label: "Our Work" },
               { href: "/#services", label: "Services" },
               { href: "/#earn", label: "Earn" },
             ].map((link) => (

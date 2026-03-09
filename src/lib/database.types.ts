@@ -612,6 +612,7 @@ export interface Database {
           stage: string;
           message: string;
           admin_note: string | null;
+          review_files: { name: string; url: string }[] | null;
           created_at: string;
         };
         Insert: {
@@ -621,6 +622,7 @@ export interface Database {
           stage: string;
           message: string;
           admin_note?: string | null;
+          review_files?: { name: string; url: string }[] | null;
           created_at?: string;
         };
         Update: {
@@ -630,6 +632,7 @@ export interface Database {
           stage?: string;
           message?: string;
           admin_note?: string | null;
+          review_files?: { name: string; url: string }[] | null;
           created_at?: string;
         };
         Relationships: [];
