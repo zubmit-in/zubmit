@@ -159,7 +159,7 @@ export default function LandingPage() {
               <span className="eyebrow justify-center">THE PROCESS</span>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4">
-              <h2 className="display" style={{ fontSize: 'clamp(36px, 5vw, 52px)' }}>How It Works</h2>
+              <h2 className="display" style={{ fontSize: 'clamp(36px, 5vw, 52px)' }}>How It <span style={{ color: 'var(--p)' }}>Works</span></h2>
             </motion.div>
           </motion.div>
 
@@ -225,7 +225,7 @@ export default function LandingPage() {
               <span className="eyebrow justify-center">WHAT WE DELIVER</span>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4">
-              <h2 className="display" style={{ fontSize: 'clamp(36px, 5vw, 52px)' }}>Our Services</h2>
+              <h2 className="display" style={{ fontSize: 'clamp(36px, 5vw, 52px)' }}>Our <span style={{ color: 'var(--p)' }}>Services</span></h2>
             </motion.div>
             <motion.p variants={fadeUp} className="mt-4 mx-auto max-w-[440px] text-sm" style={{ color: 'var(--t3)' }}>
               From case studies to lab manuals, every assignment type covered with quality and speed.
