@@ -9,6 +9,11 @@ export const metadata: Metadata = {
     "India's #1 academic assignment assistance platform. Get case studies, reports, PPTs, lab manuals & more delivered before your deadline.",
   keywords:
     "assignment help, college assignments, academic writing, PPT, lab manual, case study, India, students",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
   openGraph: {
     title: "Zubmit | Your Deadline. Our Problem.",
     description:
