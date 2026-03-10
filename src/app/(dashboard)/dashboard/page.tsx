@@ -56,7 +56,7 @@ function StatCard({ icon: Icon, label, value, accent, index }: {
       ref={ref}
       variants={fadeUp}
       className="card card-hover relative overflow-hidden cursor-default"
-      style={{ padding: '28px 26px' }}
+      style={{ padding: 'clamp(18px, 4vw, 28px) clamp(14px, 3vw, 26px)' }}
     >
       {/* Corner decoration */}
       <div
@@ -78,7 +78,7 @@ function StatCard({ icon: Icon, label, value, accent, index }: {
             <Icon className="h-[18px] w-[18px]" style={{ color: `var(--${accent})` }} />
           </div>
         </div>
-        <p className="display" style={{ fontSize: 'clamp(32px, 8vw, 58px)', color: 'var(--t1)' }}>
+        <p className="display" style={{ fontSize: 'clamp(24px, 6vw, 58px)', color: 'var(--t1)', wordBreak: 'break-all' }}>
           {isPrice ? (
             <>{value}</>
           ) : (
@@ -87,7 +87,7 @@ function StatCard({ icon: Icon, label, value, accent, index }: {
         </p>
         <p
           className="font-outfit font-semibold uppercase mt-2"
-          style={{ fontSize: '11px', letterSpacing: '0.14em', color: 'var(--t3)' }}
+          style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', letterSpacing: '0.14em', color: 'var(--t3)' }}
         >
           {label}
         </p>
@@ -143,15 +143,15 @@ export default function DashboardPage() {
   ];
 
   return (
-    <motion.div {...pageEnter}>
+    <motion.div {...pageEnter} className="min-w-0 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <span className="eyebrow">DASHBOARD</span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="display" style={{ fontSize: 'clamp(32px, 7vw, 56px)', color: 'var(--t2)' }}>Hey </span>
-            <span className="display" style={{ fontSize: 'clamp(32px, 7vw, 56px)', color: 'var(--t1)' }}>{user?.firstName || "there"}</span>
-            <span style={{ fontSize: 'clamp(28px, 6vw, 48px)' }}>&#x1F44B;</span>
+            <span className="display" style={{ fontSize: 'clamp(26px, 6vw, 56px)', color: 'var(--t2)' }}>Hey </span>
+            <span className="display" style={{ fontSize: 'clamp(26px, 6vw, 56px)', color: 'var(--t1)' }}>{user?.firstName || "there"}</span>
+            <span style={{ fontSize: 'clamp(22px, 5vw, 48px)' }}>&#x1F44B;</span>
           </div>
           <p className="font-outfit mt-2" style={{ fontSize: '15px', fontWeight: 300, color: 'var(--t2)' }}>
             Here&apos;s what&apos;s happening with your orders
@@ -176,11 +176,11 @@ export default function DashboardPage() {
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-11"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-11"
       >
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card" style={{ padding: '28px 26px' }}>
+            <div key={i} className="card" style={{ padding: 'clamp(18px, 4vw, 28px) clamp(14px, 3vw, 26px)' }}>
               <div className="skel h-9 w-9 mb-3" style={{ borderRadius: '10px' }} />
               <div className="skel h-14 w-20 mb-2" />
               <div className="skel h-3 w-24" />
@@ -293,8 +293,8 @@ export default function DashboardPage() {
               <motion.div key={order.id} variants={fadeUp}>
                 <Link href={`/order/${order.id}`}>
                   <div
-                    className="group relative flex items-center gap-4 cursor-pointer transition-all duration-250 rounded-xl overflow-hidden hover:bg-[rgba(232,114,42,0.03)]"
-                    style={{ padding: '18px 20px', borderBottom: '1px solid var(--b1)' }}
+                    className="group relative flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-250 rounded-xl overflow-hidden hover:bg-[rgba(232,114,42,0.03)]"
+                    style={{ padding: '14px 12px', borderBottom: '1px solid var(--b1)' }}
                   >
                     {/* Left accent */}
                     <div

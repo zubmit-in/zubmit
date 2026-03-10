@@ -87,7 +87,7 @@ export default function ProfilePage() {
     : { bg: 'rgba(232,114,42,0.06)', border: 'rgba(232,114,42,0.15)', color: 'var(--p-bright)' };
 
   return (
-    <motion.div {...pageEnter} className="max-w-2xl">
+    <motion.div {...pageEnter} className="max-w-2xl min-w-0 overflow-x-hidden">
       {/* Header */}
       <div>
         <span className="eyebrow">ACCOUNT</span>

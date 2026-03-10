@@ -19,12 +19,13 @@ export function StatusBadge({ status }: { status: string }) {
     <span
       className="inline-flex items-center gap-1.5 font-outfit"
       style={{
-        padding: '5px 12px',
+        padding: '4px 8px',
         borderRadius: '8px',
-        fontSize: '11px',
+        fontSize: '10px',
         fontWeight: 600,
-        letterSpacing: '0.08em',
+        letterSpacing: '0.06em',
         textTransform: 'uppercase',
+        whiteSpace: 'nowrap',
         border: `1px solid ${config.border}`,
         background: config.bg,
         color: config.text,

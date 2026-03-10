@@ -86,7 +86,7 @@ export default function DashboardLayout({
   const displayEmail = user.emailAddresses[0]?.emailAddress || "";
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside
         className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 overflow-hidden"
@@ -285,8 +285,8 @@ export default function DashboardLayout({
                   }}
                 />
                 <span
-                  className="font-medium"
-                  style={{ fontSize: '10px', color: isActive ? 'var(--p)' : 'var(--t3)' }}
+                  className="font-medium truncate max-w-[56px] text-center"
+                  style={{ fontSize: '9px', color: isActive ? 'var(--p)' : 'var(--t3)' }}
                 >
                   {item.label}
                 </span>
@@ -297,9 +297,9 @@ export default function DashboardLayout({
       </div>
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-[240px]">
-        <div className="pt-14 lg:pt-0 pb-24 lg:pb-0">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 min-w-0 lg:ml-[240px] overflow-x-hidden w-full max-w-full">
+        <div className="pt-14 lg:pt-0 pb-24 lg:pb-0 w-full">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full overflow-hidden">
             {children}
           </div>
         </div>

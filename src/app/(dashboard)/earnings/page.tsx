@@ -581,7 +581,7 @@ export default function EarningsPage() {
 
   if (profileLoading) {
     return (
-      <motion.div {...pageEnter}>
+      <motion.div {...pageEnter} className="min-w-0 overflow-x-hidden">
         <div className="space-y-6 mt-10">
           <div className="skel h-8 w-48" style={{ borderRadius: "8px" }} />
           <div className="skel h-4 w-64" style={{ borderRadius: "6px" }} />
@@ -597,7 +597,7 @@ export default function EarningsPage() {
 
   if (!isAgreed) {
     return (
-      <motion.div {...pageEnter}>
+      <motion.div {...pageEnter} className="min-w-0 overflow-x-hidden">
         <div>
           <span className="eyebrow">FREELANCER PROGRAM</span>
           <h1
@@ -857,7 +857,7 @@ export default function EarningsPage() {
   // =============================================
 
   return (
-    <motion.div {...pageEnter}>
+    <motion.div {...pageEnter} className="min-w-0 overflow-x-hidden">
       <div>
         <span className="eyebrow">FREELANCER</span>
         <h1
@@ -880,7 +880,7 @@ export default function EarningsPage() {
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"
         >
           {[
             {
@@ -890,37 +890,37 @@ export default function EarningsPage() {
             },
             {
               value: String(tasksCompleted),
-              label: "TASKS COMPLETED",
+              label: "COMPLETED",
               color: "var(--p-bright)",
             },
             {
               value: String(activeTasks),
-              label: "ACTIVE TASKS",
+              label: "ACTIVE",
               color: "var(--s)",
             },
             {
               value: `₹${pendingAmount}`,
-              label: "PENDING PAYOUT",
+              label: "PENDING",
               color: "#818cf8",
             },
           ].map((stat) => (
             <motion.div
               key={stat.label}
               variants={fadeUp}
-              className="card text-center"
-              style={{ padding: "28px 20px" }}
+              className="card text-center overflow-hidden"
+              style={{ padding: "clamp(16px, 4vw, 28px) clamp(10px, 3vw, 20px)" }}
             >
               <p
                 className="display"
-                style={{ fontSize: "clamp(28px, 6vw, 42px)", color: stat.color }}
+                style={{ fontSize: "clamp(22px, 5vw, 42px)", color: stat.color, wordBreak: "break-all" }}
               >
                 {stat.value}
               </p>
               <p
                 className="font-outfit font-semibold uppercase mt-1"
                 style={{
-                  fontSize: "10px",
-                  letterSpacing: "0.14em",
+                  fontSize: "clamp(8px, 2.2vw, 10px)",
+                  letterSpacing: "0.1em",
                   color: "var(--t3)",
                 }}
               >
@@ -1095,7 +1095,7 @@ export default function EarningsPage() {
                         <p
                           className="display"
                           style={{
-                            fontSize: "32px",
+                            fontSize: "clamp(22px, 6vw, 32px)",
                             color: "var(--g)",
                           }}
                         >
@@ -2040,14 +2040,15 @@ export default function EarningsPage() {
                         {task.subject} &middot; {serviceLabelsMap[task.service_type] || task.service_type}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <span
-                        className="font-outfit font-semibold text-xs px-2.5 py-1 rounded-md"
+                        className="font-outfit font-semibold text-xs px-2 sm:px-2.5 py-1 rounded-md"
                         style={{
                           background: cfg.bg,
                           color: cfg.color,
                           border: `1px solid ${cfg.border}`,
                           whiteSpace: "nowrap",
+                          fontSize: "10px",
                         }}
                       >
                         {cfg.label}
@@ -2055,7 +2056,7 @@ export default function EarningsPage() {
                       <p
                         className="font-outfit font-bold"
                         style={{
-                          fontSize: "15px",
+                          fontSize: "clamp(12px, 3.5vw, 15px)",
                           color: task.status === "paid" ? "var(--g)" : "var(--t2)",
                           whiteSpace: "nowrap",
                         }}
@@ -2255,7 +2256,7 @@ function ProfileSetupForm({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <motion.div {...pageEnter}>
+    <motion.div {...pageEnter} className="min-w-0 overflow-x-hidden">
       <div>
         <span className="eyebrow">ONE-TIME SETUP</span>
         <h1

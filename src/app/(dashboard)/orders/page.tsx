@@ -66,7 +66,7 @@ export default function OrdersPage() {
         });
 
   return (
-    <motion.div {...pageEnter}>
+    <motion.div {...pageEnter} className="min-w-0 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
@@ -189,8 +189,8 @@ export default function OrdersPage() {
               <motion.div key={order.id} variants={fadeUp}>
                 <Link href={`/order/${order.id}`}>
                   <div
-                    className="group relative flex items-center gap-4 cursor-pointer transition-all duration-250 hover:bg-[rgba(232,114,42,0.03)]"
-                    style={{ padding: '18px 20px', borderBottom: '1px solid var(--b1)' }}
+                    className="group relative flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-250 hover:bg-[rgba(232,114,42,0.03)]"
+                    style={{ padding: '14px 12px', borderBottom: '1px solid var(--b1)' }}
                   >
                     {/* Left accent on hover */}
                     <div
@@ -200,7 +200,7 @@ export default function OrdersPage() {
 
                     {/* Icon */}
                     <div
-                      className="flex items-center justify-center shrink-0"
+                      className="hidden sm:flex items-center justify-center shrink-0"
                       style={{
                         width: '40px', height: '40px', borderRadius: '10px',
                         background: 'var(--p-dim)', border: '1px solid rgba(232,114,42,0.2)',
@@ -243,9 +243,9 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Right side */}
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 max-w-[120px] sm:max-w-none">
                       <StatusBadge status={order.status} />
-                      <p className="display mt-1" style={{ fontSize: '18px', color: 'var(--t1)' }}>
+                      <p className="display mt-1" style={{ fontSize: 'clamp(14px, 4vw, 18px)', color: 'var(--t1)' }}>
                         {formatPrice(order.totalPrice)}
                       </p>
                     </div>

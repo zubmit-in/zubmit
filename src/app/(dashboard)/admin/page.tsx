@@ -319,7 +319,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <motion.div variants={pageEnter} initial="hidden" animate="visible">
+    <motion.div variants={pageEnter} initial="hidden" animate="visible" className="min-w-0 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6">
         <p
@@ -335,7 +335,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div
-        className="flex gap-1 mb-8 overflow-x-auto"
+        className="flex gap-1 mb-8 overflow-x-auto scrollbar-none"
         style={{
           padding: "4px",
           borderRadius: "12px",
@@ -471,23 +471,24 @@ function OverviewTab({
   return (
     <motion.div variants={fadeUp} initial="hidden" animate="show">
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-8">
         {statCards.map((s) => (
           <div
             key={s.label}
-            className="card"
-            style={{ padding: "16px 20px" }}
+            className="card overflow-hidden"
+            style={{ padding: "clamp(12px, 3vw, 16px) clamp(10px, 3vw, 20px)" }}
           >
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-1.5 mb-2">
               <s.icon
-                style={{ width: "14px", height: "14px", color: s.color }}
+                style={{ width: "12px", height: "12px", color: s.color, flexShrink: 0 }}
               />
               <span
+                className="truncate"
                 style={{
-                  fontSize: "11px",
+                  fontSize: "clamp(9px, 2.5vw, 11px)",
                   color: "var(--t3)",
                   textTransform: "uppercase",
-                  letterSpacing: "0.08em",
+                  letterSpacing: "0.06em",
                 }}
               >
                 {s.label}
@@ -495,7 +496,7 @@ function OverviewTab({
             </div>
             <p
               className="display"
-              style={{ fontSize: "22px", color: s.color }}
+              style={{ fontSize: "clamp(16px, 4vw, 22px)", color: s.color, wordBreak: "break-all" }}
             >
               {s.value}
             </p>
@@ -1335,7 +1336,7 @@ function ManageTasksTab({
   return (
     <motion.div variants={fadeUp} initial="hidden" animate="show">
       {/* Filters */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none">
         {statusFilters.map((f) => (
           <button
             key={f}
