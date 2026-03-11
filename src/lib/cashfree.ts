@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase";
-import { sendOrderConfirmationEmail, sendFinalPaymentEmail } from "@/lib/resend";
+import { sendOrderConfirmationEmail, sendFinalPaymentEmail, sendAdminPaymentNotificationEmail } from "@/lib/resend";
 import { formatDate } from "@/lib/utils";
 
 const API_VERSION = "2023-08-01";
@@ -141,7 +141,7 @@ export async function processPaymentCapture(
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("email, full_name")
+    .select("email, full_name, phone, college_name, degree, specialization, semester, roll_no")
     .eq("id", userId)
     .single();
 
@@ -168,6 +168,17 @@ export async function processPaymentCapture(
       } catch (e) {
         console.error("Email send failed:", e);
       }
+
+      // Admin notification for 40% advance payment
+      try {
+        await sendAdminPaymentNotificationEmail("advance", profile, order, {
+          amount: order.advance_amount,
+          payment_method: paymentMethod,
+          cf_payment_id: cfPaymentId,
+        });
+      } catch (e) {
+        console.error("Admin email send failed:", e);
+      }
     }
   } else if (paymentType === "final" && order) {
     await supabaseAdmin
@@ -187,6 +198,17 @@ export async function processPaymentCapture(
         });
       } catch (e) {
         console.error("Email send failed:", e);
+      }
+
+      // Admin notification for 60% final payment
+      try {
+        await sendAdminPaymentNotificationEmail("final", profile, order, {
+          amount: order.final_amount,
+          payment_method: paymentMethod,
+          cf_payment_id: cfPaymentId,
+        });
+      } catch (e) {
+        console.error("Admin email send failed:", e);
       }
     }
   }
