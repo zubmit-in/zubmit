@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -38,6 +39,20 @@ export default function RootLayout({
   return (
     <ClerkProvider signInFallbackRedirectUrl="/dashboard" signUpFallbackRedirectUrl="/onboarding">
       <html lang="en" className="dark" suppressHydrationWarning>
+        <head>
+          <Script
+            src="https://www.googletagmanager.com/gtag/js?id=G-VEBY361L9G"
+            strategy="afterInteractive"
+          />
+          <Script id="google-analytics" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-VEBY361L9G');
+            `}
+          </Script>
+        </head>
         <body className="font-outfit antialiased">
           {/* Aurora background effects */}
           <div
