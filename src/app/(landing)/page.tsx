@@ -391,7 +391,7 @@ export default function LandingPage() {
                 </button>
               </Link>
               <a
-                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "918109224530"}`}
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ""}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

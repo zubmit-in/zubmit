@@ -44,7 +44,7 @@ export async function sendOrderConfirmationEmail(
             <p style="color:#999;font-size:13px;margin:0;">The remaining ₹${remaining} is due upon delivery.</p>
           </div>
           <div style="text-align:center;margin-top:24px;">
-            <a href="https://wa.me/${process.env.WHATSAPP_NUMBER}" style="color:#22c55e;font-size:13px;">Need help? Chat on WhatsApp</a>
+            <a href="https://wa.me/${process.env.WHATSAPP_NUMBER || ""}" style="color:#22c55e;font-size:13px;">Need help? Chat on WhatsApp</a>
           </div>
         </div>
       </body>

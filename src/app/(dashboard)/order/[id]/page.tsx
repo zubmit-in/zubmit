@@ -188,7 +188,7 @@ export default function OrderDetailPage() {
   const hoursLeft = getHoursUntilDeadline(order.deadline);
   const remaining = getFinalAmount(order.totalPrice);
   const whatsappMessage = `Hi, I need help with Order #${order.id} (${order.subject})`;
-  const whatsappLink = getWhatsAppLink(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "918109224530", whatsappMessage);
+  const whatsappLink = getWhatsAppLink(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "", whatsappMessage);
 
   return (
     <div className="space-y-6">
